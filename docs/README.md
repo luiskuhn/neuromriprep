@@ -4,6 +4,8 @@ The nf-core/neuromriprep documentation is split into the following pages:
 
 - [Usage](usage.md)
   - An overview of how the pipeline works, how to run it and a description of all of the different command-line flags.
+- [Production Workflow Guide](production_workflow_guide.md)
+  - A step-by-step, non-technical guide to running the production pipeline with your data.
 - [Output](output.md)
   - An overview of the different results produced by the pipeline and how to interpret them.
 

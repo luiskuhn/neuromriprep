@@ -1,62 +1,76 @@
 process FMRIPREP {
-    tag "$meta.id"
+
+    tag "${meta.subject}"
     label 'process_high'
-    label 'process_long'
 
+    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/fmriprep_24.1.1.sif' }"
 
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'docker://nipreps/fmriprep:24.1.1':
-        'nipreps/fmriprep:24.1.1' }"
+    containerOptions {
+        def tf_host = task.ext.templateflow_host ?: (System.getenv('TEMPLATEFLOW_HOME') ?: '/nic/sw/IRTG/templateflow')
+        def tf_cont = task.ext.templateflow_cont ?: '/templateflow'
+        return "--cleanenv -B ${tf_host}:${tf_cont}"
+    }
 
     input:
-    tuple val(meta), path(input_dir)
-    //path output_dir
-    path fs_license
+    tuple val(meta),
+    path(bids_dataset, stageAs: 'input_bids'),
+    path(fs_license, stageAs: 'fs_license.txt'),
+    path(bids_filter, stageAs: 'bids_filter.json')
 
     output:
-    tuple val(meta), path ("results/*")   , emit: fmriprep_output
-    path "versions.yml"                   , emit: versions
-
-    when:
-    task.ext.when == null || task.ext.when
+    tuple val(meta), path("fmriprep_out_sub-${meta.subject}"), emit: out
+    path("fmriprep_out_sub-${meta.subject}/**"),               emit: fmriprep_publish
+    path "versions_sub-${meta.subject}.yml",                   emit: versions
+    path "logs/sub-${meta.subject}_out.log",                   emit: log_out
+    path "logs/sub-${meta.subject}_err.log",                   emit: log_err
 
     script:
-    def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
-    def random_seed = task.ext.random_seed ?: 13
-    """
-    mkdir -p \$PWD/results
-    results="\$PWD/results"
+    def participant  = meta.subject.toString()
+    def omp_threads  = task.ext.omp_threads ?: (task.cpus ?: 16)
+    def random_seed  = task.ext.random_seed ?: 13
+    def longitudinal = task.ext.longitudinal ? '--longitudinal' : ''
+    def extra_spaces = (task.ext.extra_output_spaces ?: '').toString().trim()
 
+    def outdir = "fmriprep_out_sub-${participant}"
+    def wdir   = "work_dir_sub-${participant}"
+
+    def base_spaces = task.ext.base_output_spaces ?: 'MNI152NLin2009cAsym MNI152NLin6Asym'
+    def all_spaces  = extra_spaces ? "${base_spaces} ${extra_spaces}".trim() : base_spaces
+
+    """
+    set -euo pipefail
+
+    mkdir -p logs "${outdir}" "${wdir}"
+
+    export TEMPLATEFLOW_HOME=/templateflow
+
+    FILTER_ARG=""
+    if [ -f bids_filter.json ]; then
+        FILTER_ARG="--bids-filter-file bids_filter.json"
+    fi
 
     fmriprep \\
-        $input_dir \\
-        \$results \\
+        input_bids \\
+        "${outdir}" \\
         participant \\
-        --participant-label $prefix \\
-        --fs-license-file $fs_license \\
+        --notrack \\
+        --participant-label ${participant} \\
+        --fs-license-file fs_license.txt \\
         --skip_bids_validation \\
-        --omp-nthreads $task.cpus \\
-        --random-seed $random_seed \\
+        --omp-nthreads ${omp_threads} \\
+        --random-seed ${random_seed} \\
         --skull-strip-fixed-seed \\
-        $args
+        --output-spaces ${all_spaces} \\
+        --work-dir "${wdir}" \\
+        ${longitudinal} \\
+        \${FILTER_ARG} \\
+        > logs/sub-${participant}_out.log 2>&1
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        fmriprep: \$(fmriprep --version 2>&1 | sed 's/fmriprep v//g')
-    END_VERSIONS
-    """
+    grep -i -e "warning" -e "error" logs/sub-${participant}_out.log > logs/sub-${participant}_err.log || true
 
-    stub:
-    def prefix = task.ext.prefix ?: "${meta.id}"
-    """
-    mkdir -p \$PWD/results/sub-${prefix}
-    touch \$PWD/results/sub-${prefix}/sub-${prefix}_desc-preproc_T1w.nii.gz
-    touch \$PWD/results/sub-${prefix}/sub-${prefix}_desc-preproc_bold.nii.gz
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        fmriprep: 24.0.1
-    END_VERSIONS
+    cat <<-END_VERSIONS > versions_sub-${participant}.yml
+"${task.process}":
+  fmriprep: "\$(fmriprep --version 2>/dev/null | tr -d '\\n' || echo unknown)"
+END_VERSIONS
     """
 }

@@ -21,7 +21,8 @@
                     "pattern": "^\\S+\\.csv$",
                     "description": "Path to comma-separated file containing information about the samples in the experiment.",
                     "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/neuromriprep/usage#samplesheet-input).",
-                    "fa_icon": "fas fa-file-csv"
+                    "fa_icon": "fas fa-file-csv",
+                    "default": "assets/samplesheet.csv"
                 },
                 "outdir": {
                     "type": "string",
@@ -35,11 +36,119 @@
                     "fa_icon": "fas fa-envelope",
                     "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
                     "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                }
+            }
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Less common options for the pipeline, typically set in a config file.",
+            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
+            "properties": {
+                "version": {
+                    "type": "boolean",
+                    "description": "Display version and exit.",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
                 },
-                "multiqc_title": {
+                "publish_dir_mode": {
                     "type": "string",
-                    "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
-                    "fa_icon": "fas fa-file-signature"
+                    "default": "copy",
+                    "description": "Method used to save pipeline results to output directory.",
+                    "help_text": "The Nextflow `publishDir` option specifies which intermediate files should be saved to the output directory. This option tells the pipeline what method should be used to move these files. See [Nextflow docs](https://www.nextflow.io/docs/latest/process.html#publishdir) for details.",
+                    "fa_icon": "fas fa-copy",
+                    "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
+                    "hidden": true
+                },
+                "email_on_fail": {
+                    "type": "string",
+                    "description": "Email address for completion summary, only when pipeline fails.",
+                    "fa_icon": "fas fa-exclamation-triangle",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
+                    "help_text": "An email address to send a summary email to when the pipeline is completed - ONLY sent if the pipeline does not exit successfully.",
+                    "hidden": true
+                },
+                "plaintext_email": {
+                    "type": "boolean",
+                    "description": "Send plain-text email instead of HTML.",
+                    "fa_icon": "fas fa-remove-format",
+                    "hidden": true
+                },
+                "monochrome_logs": {
+                    "type": "boolean",
+                    "description": "Do not use coloured log outputs.",
+                    "fa_icon": "fas fa-palette",
+                    "hidden": true
+                },
+                "hook_url": {
+                    "type": "string",
+                    "description": "Incoming hook URL for messaging service",
+                    "fa_icon": "fas fa-people-group",
+                    "help_text": "Incoming hook URL for messaging service. Currently, MS Teams and Slack are supported.",
+                    "hidden": true
+                },
+                "validate_params": {
+                    "type": "boolean",
+                    "description": "Boolean whether to validate parameters against the schema at runtime",
+                    "fa_icon": "fas fa-check-square",
+                    "hidden": true,
+                    "default": true
+                },
+                "pipelines_testdata_base_path": {
+                    "type": "string",
+                    "fa_icon": "far fa-check-circle",
+                    "description": "Base URL or local path to location of pipeline test dataset files",
+                    "default": "https://raw.githubusercontent.com/nf-core/test-datasets/",
+                    "hidden": true
+                },
+                "trace_report_suffix": {
+                    "type": "string",
+                    "fa_icon": "far calendar",
+                    "description": "Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss.",
+                    "hidden": true
+                },
+                "help": {
+                    "type": ["boolean", "string"],
+                    "description": "Display the help message.",
+                    "hidden": true
+                },
+                "help_full": {
+                    "type": "boolean",
+                    "description": "Display the full detailed help message.",
+                    "hidden": true
+                },
+                "show_hidden": {
+                    "type": "boolean",
+                    "description": "Display hidden parameters in the help message (only works when --help or --help_full are provided)."
+                },
+                "run_complete": {
+                    "type": "boolean",
+                    "description": "Run complete pipeline - overwrites stops_bidval, stop_mriqc, stop_fmriprep, skip_mriqc and skip_fmriprep"
+                },
+                "dcm2bids_config": {
+                    "type": "string",
+                    "description": "config file for the subject that is run"
+                },
+                "stop_bidsval": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "stops pipeline after bidsvalidation"
+                },
+                "stop_mriqc": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "stops pipeline after mriqc"
+                },
+                "stop_fmriprep": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "skip_mriqc": {
+                    "type": "boolean"
+                },
+                "skip_fmriprep": {
+                    "type": "boolean"
                 }
             }
         },
@@ -90,114 +199,6 @@
                     "fa_icon": "fas fa-users-cog"
                 }
             }
-        },
-        "generic_options": {
-            "title": "Generic options",
-            "type": "object",
-            "fa_icon": "fas fa-file-import",
-            "description": "Less common options for the pipeline, typically set in a config file.",
-            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
-            "properties": {
-                "version": {
-                    "type": "boolean",
-                    "description": "Display version and exit.",
-                    "fa_icon": "fas fa-question-circle",
-                    "hidden": true
-                },
-                "publish_dir_mode": {
-                    "type": "string",
-                    "default": "copy",
-                    "description": "Method used to save pipeline results to output directory.",
-                    "help_text": "The Nextflow `publishDir` option specifies which intermediate files should be saved to the output directory. This option tells the pipeline what method should be used to move these files. See [Nextflow docs](https://www.nextflow.io/docs/latest/process.html#publishdir) for details.",
-                    "fa_icon": "fas fa-copy",
-                    "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
-                    "hidden": true
-                },
-                "email_on_fail": {
-                    "type": "string",
-                    "description": "Email address for completion summary, only when pipeline fails.",
-                    "fa_icon": "fas fa-exclamation-triangle",
-                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
-                    "help_text": "An email address to send a summary email to when the pipeline is completed - ONLY sent if the pipeline does not exit successfully.",
-                    "hidden": true
-                },
-                "plaintext_email": {
-                    "type": "boolean",
-                    "description": "Send plain-text email instead of HTML.",
-                    "fa_icon": "fas fa-remove-format",
-                    "hidden": true
-                },
-                "max_multiqc_email_size": {
-                    "type": "string",
-                    "description": "File size limit when attaching MultiQC reports to summary emails.",
-                    "pattern": "^\\d+(\\.\\d+)?\\.?\\s*(K|M|G|T)?B$",
-                    "default": "25.MB",
-                    "fa_icon": "fas fa-file-upload",
-                    "hidden": true
-                },
-                "monochrome_logs": {
-                    "type": "boolean",
-                    "description": "Do not use coloured log outputs.",
-                    "fa_icon": "fas fa-palette",
-                    "hidden": true
-                },
-                "hook_url": {
-                    "type": "string",
-                    "description": "Incoming hook URL for messaging service",
-                    "fa_icon": "fas fa-people-group",
-                    "help_text": "Incoming hook URL for messaging service. Currently, MS Teams and Slack are supported.",
-                    "hidden": true
-                },
-                "multiqc_config": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Custom config file to supply to MultiQC.",
-                    "fa_icon": "fas fa-cog",
-                    "hidden": true
-                },
-                "multiqc_logo": {
-                    "type": "string",
-                    "description": "Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file",
-                    "fa_icon": "fas fa-image",
-                    "hidden": true
-                },
-                "multiqc_methods_description": {
-                    "type": "string",
-                    "description": "Custom MultiQC yaml file containing HTML including a methods description.",
-                    "fa_icon": "fas fa-cog"
-                },
-                "validate_params": {
-                    "type": "boolean",
-                    "description": "Boolean whether to validate parameters against the schema at runtime",
-                    "fa_icon": "fas fa-check-square",
-                    "hidden": true
-                },
-                "pipelines_testdata_base_path": {
-                    "type": "string",
-                    "fa_icon": "far fa-check-circle",
-                    "description": "Base URL or local path to location of pipeline test dataset files",
-                    "default": "https://raw.githubusercontent.com/nf-core/test-datasets/",
-                    "hidden": true
-                },
-                "trace_report_suffix": {
-                    "type": "string",
-                    "fa_icon": "far calendar",
-                    "description": "Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss.",
-                    "hidden": true
-                },
-                "help": {
-                    "type": ["boolean", "string"],
-                    "description": "Display the help message."
-                },
-                "help_full": {
-                    "type": "boolean",
-                    "description": "Display the full detailed help message."
-                },
-                "show_hidden": {
-                    "type": "boolean",
-                    "description": "Display hidden parameters in the help message (only works when --help or --help_full are provided)."
-                }
-            }
         }
     },
     "allOf": [
@@ -205,38 +206,134 @@
             "$ref": "#/$defs/input_output_options"
         },
         {
-            "$ref": "#/$defs/institutional_config_options"
+            "$ref": "#/$defs/generic_options"
         },
         {
-            "$ref": "#/$defs/generic_options"
+            "$ref": "#/$defs/institutional_config_options"
         }
     ],
     "properties": {
-        "bids_dir": {
+        "dcm2bids_config_container": {
             "type": "string"
         },
-        "config": {
+        "dcm2bids_container": {
             "type": "string"
         },
-        "fs_license": {
+        "dcm2bids_postproc_container": {
             "type": "string"
         },
-        "run_dcm2bids": {
-            "type": "boolean"
+        "merge_bids_dataset_container": {
+            "type": "string"
         },
-        "run_bidsvalidator": {
-            "type": "boolean"
+        "bidsignore_container": {
+            "type": "string"
         },
-        "run_pydeface": {
-            "type": "boolean"
+        "bidsvalidator_container": {
+            "type": "string"
         },
-        "run_mriqc": {
-            "type": "boolean"
+        "bids_qc_gate_container": {
+            "type": "string"
         },
-        "run_fmriprep": {
-            "type": "boolean"
+        "mriqc_participant_container": {
+            "type": "string"
         },
-        "run_complete": {
+        "mriqc_group_container": {
+            "type": "string"
+        },
+        "fmriprep_container": {
+            "type": "string"
+        },
+        "pydeface_container": {
+            "type": "string"
+        },
+        "mri_deface_container": {
+            "type": "string"
+        },
+        "fsl_deface_container": {
+            "type": "string"
+        },
+        "afni_refacer_container": {
+            "type": "string"
+        },
+        "deepdefacer_container": {
+            "type": "string"
+        },
+        "deface_qc_render_container": {
+            "type": "string"
+        },
+        "deface_metrics_container": {
+            "type": "string"
+        },
+        "deface_detector_container": {
+            "type": "string"
+        },
+        "merge_benchmark_container": {
+            "type": "string"
+        },
+        "enforce_bidsqc_gate": {
+            "type": "boolean",
+            "default": true
+        },
+        "mriqc_vpn_file": {
+            "type": "string",
+            "default": "assets/input_pipeline/mriqc_vpn.txt"
+        },
+        "fmriprep_vpn_file": {
+            "type": "string"
+        },
+        "fmriprep_bids_filter": {
+            "type": "string"
+        },
+        "fmriprep_fs_license": {
+            "type": "string",
+            "default": "/nic/sw/FreeSurfer/license.txt"
+        },
+        "pydeface_vpn_file": {
+            "type": "string"
+        },
+        "mri_deface_bin": {
+            "type": "string",
+            "default": "mri_deface"
+        },
+        "mri_deface_brain_template": {
+            "type": "string",
+            "default": "/opt/mri_deface/talairach_mixed_with_skull.gca"
+        },
+        "mri_deface_face_template": {
+            "type": "string",
+            "default": "/opt/mri_deface/face.gca"
+        },
+        "mri_deface_cpus": {
+            "type": "integer",
+            "default": 8
+        },
+        "mri_deface_mem": {
+            "type": "string",
+            "default": "8 GB"
+        },
+        "mri_deface_time": {
+            "type": "string",
+            "default": "2h"
+        },
+        "deface_tool": {
+            "type": "string",
+            "default": "pydeface"
+        },
+        "bids_qc_script": {
+            "type": "string",
+            "default": "/home/lorena/neuromriprep/neuromriprep/assets/scripts/bids_gate.py"
+        },
+        "bids_qc_allowlist": {
+            "type": "string",
+            "default": "/home/lorena/neuromriprep/neuromriprep/assets/input_pipeline/bidsval_allowlist.txt"
+        },
+        "bids_qc_helpers": {
+            "type": "string"
+        },
+        "mode": {
+            "type": "string"
+        },
+        "force_dcm2bids": {
             "type": "boolean"
         }
     }

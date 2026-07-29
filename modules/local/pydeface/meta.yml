@@ -1,44 +1,77 @@
-name: pydeface
-description: Removes facial structure from MRI images
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+# # TODO nf-core: Add a description of the module and list keywords
+name: "pydeface"
+description: write your description here
 keywords:
-  - deface
-  - anonymize
-  - mri
-  - neuroimaging
+  - sort
+  - example
+  - genomics
 tools:
-  - pydeface:
-      description: Removes facial structure from MRI images
-      homepage: https://github.com/poldracklab/pydeface
-      documentation: https://github.com/poldracklab/pydeface
-      tool_dev_url: https://github.com/poldracklab/pydeface
+  ## TODO nf-core: Add a description and other details for the software below
+  - "pydeface":
+      description: ""
+      homepage: ""
+      documentation: ""
+      tool_dev_url: ""
       doi: ""
-      licence: ["MIT"]
+      licence: null
+      identifier: null
 
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
-  - input_file:
-      type: file
-      description: Input MRI image file
-      pattern: "*.nii.gz"
+  ### TODO nf-core: Add a description of all of the variables used as input
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1' ]`
+    - bam:
+        type: file
+        description: Sorted BAM/CRAM/SAM file
+        pattern: "*.{bam,cram,sam}"
+        ontologies:
+          - edam: "http://edamontology.org/format_2572" # BAM
+          - edam: "http://edamontology.org/format_2573" # CRAM
+          - edam: "http://edamontology.org/format_3462" # SAM
 
 output:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
-  - defaced_image:
-      type: file
-      description: Defaced MRI image file
-      pattern: "*_defaced.nii.gz"
-  - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+  ### TODO nf-core: Add a description of all of the variables used as output
+  bam:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1' ]`
+      - "*.bam":
+          type: file
+          description: Sorted BAM/CRAM/SAM file
+          pattern: "*.{bam,cram,sam}"
+          ontologies:
+            - edam: "http://edamontology.org/format_2572" # BAM
+            - edam: "http://edamontology.org/format_2573" # CRAM
+            - edam: "http://edamontology.org/format_3462" # SAM
+  versions_pydeface:
+    - - "${task.process}":
+          type: string
+          description: The name of the process
+      - "pydeface":
+          type: string
+          description: The name of the tool
+      - "pydeface --version":
+          type: eval
+          description: The expression to obtain the version of the tool
 
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - pydeface:
+          type: string
+          description: The name of the tool
+      - pydeface --version:
+          type: eval
+          description: The expression to obtain the version of the tool
 authors:
-  - "@CaroAMN"
+  - "@loboehme1"
+maintainers:
+  - "@loboehme1"

@@ -1,51 +1,77 @@
-name: fmriprep
-description: Runs fMRIPrep, a functional magnetic resonance imaging (fMRI) data preprocessing pipeline
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+# # TODO nf-core: Add a description of the module and list keywords
+name: "fmriprep"
+description: write your description here
 keywords:
-  - fmri
-  - preprocessing
-  - bids
+  - sort
+  - example
+  - genomics
 tools:
-  - fmriprep:
-      description: A robust preprocessing pipeline for functional MRI data
-      homepage: https://fmriprep.org
-      documentation: https://fmriprep.org/en/stable/
-      tool_dev_url: https://github.com/nipreps/fmriprep
-      doi: "10.1038/s41592-018-0235-4"
-      licence: ["Apache-2.0"]
+  ## TODO nf-core: Add a description and other details for the software below
+  - "fmriprep":
+      description: ""
+      homepage: ""
+      documentation: ""
+      tool_dev_url: ""
+      doi: ""
+      licence: null
+      identifier: biotools:glasser_parcellation
 
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
-  - input_dir:
-      type: directory
-      description: Directory containing BIDS dataset
-      pattern: "*"
-  - output_dir:
-      type: directory
-      description: Directory where fMRIPrep output will be saved
-      pattern: "*"
-  - fs_license:
-      type: file
-      description: FreeSurfer license file
-      pattern: "license.txt"
+  ### TODO nf-core: Add a description of all of the variables used as input
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1' ]`
+    - bam:
+        type: file
+        description: Sorted BAM/CRAM/SAM file
+        pattern: "*.{bam,cram,sam}"
+        ontologies:
+          - edam: "http://edamontology.org/format_2572" # BAM
+          - edam: "http://edamontology.org/format_2573" # CRAM
+          - edam: "http://edamontology.org/format_3462" # SAM
 
 output:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
-  - fmriprep_output:
-      type: directory
-      description: Directory containing fMRIPrep output files
-      pattern: "*"
-  - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+  ### TODO nf-core: Add a description of all of the variables used as output
+  bam:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1' ]`
+      - "*.bam":
+          type: file
+          description: Sorted BAM/CRAM/SAM file
+          pattern: "*.{bam,cram,sam}"
+          ontologies:
+            - edam: "http://edamontology.org/format_2572" # BAM
+            - edam: "http://edamontology.org/format_2573" # CRAM
+            - edam: "http://edamontology.org/format_3462" # SAM
+  versions_fmriprep:
+    - - "${task.process}":
+          type: string
+          description: The name of the process
+      - "fmriprep":
+          type: string
+          description: The name of the tool
+      - "fmriprep --version":
+          type: eval
+          description: The expression to obtain the version of the tool
 
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - fmriprep:
+          type: string
+          description: The name of the tool
+      - fmriprep --version:
+          type: eval
+          description: The expression to obtain the version of the tool
 authors:
-  - "@CaroAMN"
+  - "@loboehme1"
+maintainers:
+  - "@loboehme1"
