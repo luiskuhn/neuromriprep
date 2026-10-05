@@ -241,6 +241,7 @@ Archive the commit, parameters/configuration, image identities, and reports. Con
 - [Pipeline architecture and thesis context](docs/pipeline.md)
 - [Outputs and quality-control review](docs/output.md)
 - [Defacing benchmark](docs/benchmark.md)
+- [Verified lessons from the prototype](docs/prototype-notes.md)
 
 ## Credits and references
 

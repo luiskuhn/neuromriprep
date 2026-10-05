@@ -21,6 +21,38 @@ Paths below are relative to `--outdir`. They describe the publishers in [main.nf
 
 The BIDS files are published at the output root, not in a `bids_dataset/` subdirectory. Inspect actual outputs rather than expecting every directory for every run. The derivative files are not replacements for the original anatomical data.
 
+### Example converted dataset
+
+Illustrative files after conversion; exact entities and modalities depend on the acquisition and dcm2bids mapping:
+
+```text
+results/
+├── dataset_description.json
+├── .bidsignore
+├── sub-001/
+│   └── ses-01/
+│       ├── anat/
+│       │   ├── sub-001_ses-01_T1w.nii.gz
+│       │   └── sub-001_ses-01_T1w.json
+│       ├── func/
+│       │   ├── sub-001_ses-01_task-rest_bold.nii.gz
+│       │   └── sub-001_ses-01_task-rest_bold.json
+│       ├── fmap/
+│       │   ├── sub-001_ses-01_phasediff.nii.gz
+│       │   └── sub-001_ses-01_phasediff.json
+│       └── dwi/
+│           ├── sub-001_ses-01_dwi.nii.gz
+│           ├── sub-001_ses-01_dwi.json
+│           ├── sub-001_ses-01_dwi.bval
+│           └── sub-001_ses-01_dwi.bvec
+├── logs_dcm2bids/
+└── derivatives/
+```
+
+`anat` contains structural images; `func` contains BOLD time series and any single-band references; `fmap` contains distortion-correction acquisitions; `dwi` contains diffusion images and gradient files. This abbreviated tree is not a complete BIDS test dataset (for example, the field-map acquisition may need additional files). Conversion of DWI does not imply diffusion preprocessing: no dedicated diffusion-analysis branch is wired into this workflow.
+
+Unlike the prototype’s illustrative tree, the current merge does not create `participants.tsv`, a dataset README, or a `sourcedata/` copy of the DICOM inputs. Retain source data and curate study-level metadata separately.
+
 ## Diagnostics that remain in the work directory
 
 Several module outputs are not connected to top-level publishers:

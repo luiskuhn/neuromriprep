@@ -116,6 +116,26 @@ Most declared `*_container` parameters in `nextflow.config` are **not wired into
 
 fMRIPrep requires a valid FreeSurfer license and a populated TemplateFlow cache accessible at `ext.templateflow_host` (bound to `/templateflow`). Obtain the license through FreeSurfer and prepare the references required by the selected output spaces. The default license and TemplateFlow paths are institutional. `ses01`/`ses02` filter aliases also resolve to institutional paths: provide your own JSON filter instead.
 
+### Container preparation and checks
+
+The prototype’s image-building notes are useful for setup, but its full image set is historical. For dcm2bids, the current default still uses 3.2.0; its [versioned upstream documentation](https://unfmontreal.github.io/Dcm2Bids/3.2.0/how-to/container/) provides this pull pattern:
+
+```bash
+mkdir -p /data/study/containers
+apptainer pull /data/study/containers/dcm2bids_3.2.0.sif docker://unfmontreal/dcm2bids:3.2.0
+apptainer exec /data/study/containers/dcm2bids_3.2.0.sif dcm2bids --help
+```
+
+Set the corresponding `ext.container` path in `site.config`. This prepares the conversion image only; helper, QC, preprocessing, and defacing images still need separate configuration.
+
+The current validator executes a Bash task script and calls `bids-validator` directly. Do not assume the prototype’s `validator_1.14.13.sif` is interchangeable with `bidsvalidator_bash.sif`. Check a candidate image before using it:
+
+```bash
+apptainer exec /srv/containers/bidsvalidator_bash.sif bash -c 'command -v bids-validator && bids-validator --version'
+```
+
+Also inspect a representative validation log: [bids_gate.py](../assets/scripts/bids_gate.py) recognizes textual `[ERROR] CODE` and `[WARNING] CODE` entries. A version check alone does not verify compatibility with that parser. Record image checksums and actual tool versions; the MRIQC wrappers currently write a fixed version string, and SIF filenames are not authoritative version records. These examples were checked against documentation/source, not executed with containers here.
+
 ## 6. Create a parameter file
 
 Create `bids_filter.json` containing `{}` for an unrestricted filter, or supply a study-reviewed fMRIPrep BIDS filter. The repository's default `assets/empty_bids_filter.json` is absent, so an explicit file is required.
@@ -185,5 +205,18 @@ Inspect resolved process overrides. This checks configuration resolution, not av
 | Missing participant outputs                           | Check `.nextflow.log`, trace and task logs; ignored fMRIPrep failures can leave incomplete results.            |
 | No defaced images                                     | Confirm the parsed subject/session and `anat/*.nii.gz` exist, the selector matches, and the branch is enabled. |
 | Duplicate fMRIPrep jobs or overwritten configurations | See the multi-session and publication limitations in [pipeline architecture](pipeline.md).                     |
+
+### Validation and field-map troubleshooting
+
+Retained from the [prototype guide](prototype-notes.md), with current gate behavior:
+
+| Finding                                              | Investigate before changing the dataset                                                                                                                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `BOLD_NOT_4D` or `NIFTI_PIXDIM4`                     | Compare acquisition records, source-series completeness, conversion logs, and NIfTI dimensions/time spacing. An interrupted acquisition is one possibility; do not automatically delete the scan.                                    |
+| Inconsistent subjects/parameters or missing sessions | Compare against the study design, samplesheet names, and conversion mapping. Decide whether data are missing or variation is expected before allowlisting the actual warning code.                                                   |
+| Non-BIDS logs or temporary files                     | Inspect the reported path and the effective lowercase `.bidsignore`. The current postprocessor already handles ADC files, DWI SBRef gradients, and temporary conversion files. Avoid importing the prototype’s exclusions wholesale. |
+| Field-map references after excluding/remapping a run | Check `IntendedFor` targets and consistency of `B0FieldIdentifier`/`B0FieldSource`. Correct the conversion configuration and validate the regenerated dataset before resuming fMRIPrep.                                              |
+
+Validate the **dataset root**, not only a `sub-*` directory. Issue names/severity can vary with validator versions; use the actual log rather than historical numeric codes. See the [source-backed implementation checks](prototype-notes.md#current-implementation-checks).
 
 Keep `.nextflow/` and the work directory until review is complete. Resume from the same launch directory with the same work directory; changed inputs or task definitions may invalidate caches. Do not edit published results expecting resumed upstream tasks to consume those edits: correct the source data/configuration and rerun. Archive parameters, configuration, commit, container identities and reports alongside the outputs. See [output documentation](output.md) for enabling execution reports and locating unpublished logs.
