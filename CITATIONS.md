@@ -1,4 +1,6 @@
-# nf-core/neuromriprep: Citations
+# neuromriprep: Citations
+
+The consolidated bibliography is in the [README references](README.md#references), including MRIQC, fMRIPrep, BIDS, and thesis attribution. The legacy tool references below are retained for provenance; FastQC and MultiQC are not stages of the current MRI workflow, and packaging references do not imply use in every run.
 
 ## FAIR-oriented research data management
 

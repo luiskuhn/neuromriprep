@@ -243,8 +243,39 @@ Archive the commit, parameters/configuration, image identities, and reports. Con
 - [Defacing benchmark](docs/benchmark.md)
 - [Verified lessons from the prototype](docs/prototype-notes.md)
 
-## Credits and references
+## Credits and support
 
-Contributors include Luis, Mahnaz, Carolin Schwitalla, and Lorena Böhme. This documentation draws on Böhme's 2026 master's thesis, _neuromriprep: A Nextflow Pipeline for Reproducible Preprocessing and Anonymization for Functional MRI Data_, and checks operational details against the current source. See [source notes and limitations](docs/pipeline.md#thesis-and-source-notes) and [tool citations](CITATIONS.md). Cite the tools actually used and record the pipeline commit and container versions; this development repository does not declare a pipeline DOI.
+Contributors include Luis, Mahnaz, Carolin Schwitalla, and Lorena Böhme. This documentation draws on Böhme's 2026 master's thesis, _neuromriprep: A Nextflow Pipeline for Reproducible Preprocessing and Anonymization for Functional MRI Data_, and checks operational details against the current source. See [source notes and limitations](docs/pipeline.md#thesis-and-source-notes) and the [references below](#references).
 
 For bugs or questions, [open an issue](https://github.com/luiskuhn/neuromriprep/issues). See the [contribution guidelines](docs/CONTRIBUTING.md) and [MIT license](LICENSE).
+
+## References
+
+This list consolidates the scientific references in the repository's guides, [citation file](CITATIONS.md), [module metadata](modules/local/bidsvalidator/meta.yml), and [methods template](assets/methods_description_template.yml), with MRIQC and fMRIPrep papers added for the documented MRI workflow. Cite the tools actually used, their versions, and the pipeline commit; this development repository does not declare a pipeline DOI. Placeholder DOIs and test-fixture identifiers are not pipeline citations.
+
+### Workflow, MRI standards, and research infrastructure
+
+- **Research infrastructure:** Sezer, Z. H., et al. (2026). _de.NBI Cloud Enables FAIR-oriented Management and Reproducible Workflows for Sensitive Bioimage Data in Mental Health Studies_. IWSG2026. DOI: [10.5281/zenodo.22099332](https://doi.org/10.5281/zenodo.22099332). This identifies the infrastructure paper, not a neuromriprep release.
+- **BIDS:** Gorgolewski, K. J., et al. (2016). _The brain imaging data structure, a format for organizing and describing outputs of neuroimaging experiments_. Scientific Data, 3, 160044. DOI: [10.1038/sdata.2016.44](https://doi.org/10.1038/sdata.2016.44).
+- **MRIQC:** Esteban, O., et al. (2017). _MRIQC: Advancing the automatic prediction of image quality in MRI from unseen sites_. PLOS ONE, 12(9), e0184661. DOI: [10.1371/journal.pone.0184661](https://doi.org/10.1371/journal.pone.0184661).
+- **fMRIPrep:** Esteban, O., et al. (2019). _fMRIPrep: a robust preprocessing pipeline for functional MRI_. Nature Methods, 16, 111–116. DOI: [10.1038/s41592-018-0235-4](https://doi.org/10.1038/s41592-018-0235-4).
+- **Nextflow:** Di Tommaso, P., et al. (2017). _Nextflow enables reproducible computational workflows_. Nature Biotechnology, 35, 316–319. DOI: [10.1038/nbt.3820](https://doi.org/10.1038/nbt.3820).
+- **nf-core:** Ewels, P. A., et al. (2020). _The nf-core framework for community-curated bioinformatics pipelines_. Nature Biotechnology, 38, 276–278. DOI: [10.1038/s41587-020-0439-x](https://doi.org/10.1038/s41587-020-0439-x). Cited for the framework/template; neuromriprep is not currently an official nf-core pipeline.
+- **Singularity:** Kurtzer, G. M., Sochat, V., & Bauer, M. W. (2017). _Singularity: Scientific containers for mobility of compute_. PLOS ONE, 12(5), e0177459. DOI: [10.1371/journal.pone.0177459](https://doi.org/10.1371/journal.pone.0177459). Background for the container ecosystem; the run guide uses Apptainer.
+
+### Additional references retained from the repository template
+
+These references appear in the inherited citation file or methods template. Their inclusion does not establish use in an MRI run; FastQC and MultiQC are not stages of the current MRI workflow.
+
+- **MultiQC:** Ewels, P., et al. (2016). _MultiQC: summarize analysis results for multiple tools and samples in a single report_. Bioinformatics, 32(19), 3047–3048. DOI: [10.1093/bioinformatics/btw354](https://doi.org/10.1093/bioinformatics/btw354).
+- **Bioconda:** Grüning, B., et al. (2018). _Bioconda: sustainable and comprehensive software distribution for the life sciences_. Nature Methods, 15, 475–476. DOI: [10.1038/s41592-018-0046-7](https://doi.org/10.1038/s41592-018-0046-7).
+- **BioContainers:** da Veiga Leprevost, F., et al. (2017). _BioContainers: an open-source and community-driven framework for software standardization_. Bioinformatics, 33(16), 2580–2582. DOI: [10.1093/bioinformatics/btx192](https://doi.org/10.1093/bioinformatics/btx192).
+- **Docker:** Merkel, D. (2014). _Docker: lightweight Linux containers for consistent development and deployment_. Linux Journal, 2014(239), article 2. ACM bibliographic identifier: [10.5555/2600239.2600241](https://dl.acm.org/doi/10.5555/2600239.2600241).
+
+### Thesis and related resources without a verified DOI
+
+- **Thesis and figures:** Böhme, L. (2026). _neuromriprep: A Nextflow Pipeline for Reproducible Preprocessing and Anonymization for Functional MRI Data_. Master's thesis in Bioinformatics, University of Tübingen, 23 July 2026. Supplied PDF; see [figure attribution](docs/images/README.md) and [source notes](docs/pipeline.md#thesis-and-source-notes). No public URL or DOI is asserted.
+- **Precursor implementation:** [IRTG_MRI_ImagePreprocessing documentation](https://github.com/luiskuhn/IRTG_MRI_ImagePreprocessing/blob/7cb194818a6905494a9b28b57cb0f9a02817f4f2/docs/usage.md), pinned to commit `7cb1948`; see [verified lessons](docs/prototype-notes.md).
+- **NFDI context:** [NFDI4BIOIMAGE consortium description](https://www.nfdi.de/consortia-nfdi4bioimage/?lang=en).
+- **FastQC (template resource):** Andrews, S. (2010). _FastQC: A Quality Control Tool for High Throughput Sequence Data_. [Project website](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).
+- **Anaconda (template resource):** _Anaconda Software Distribution_ (2016), version 2-2.4.0, as cited in the inherited citation file. [Project website](https://www.anaconda.com/).
