@@ -4,6 +4,14 @@
 
 neuromriprep coordinates tools that were previously run through separate Bash scripts. Nextflow manages task dependencies, resource requests, caching, and restartable execution. The input is DICOM organized by participant/session; direct entry from an existing BIDS dataset is not exposed by the current entry workflow. The result is a merged BIDS dataset, optional MRIQC and fMRIPrep derivatives, and separate defaced anatomical images. Statistical analysis of fMRI data is outside this workflow.
 
+## FAIR-oriented infrastructure and NFDI context
+
+[Sezer et al. (2026), §§III–V](https://doi.org/10.5281/zenodo.22099332) place neuromriprep within the IRTG 2804 research data management infrastructure. The paper describes de.NBI Cloud computation using Slurm, Apptainer, and shared storage; OMERO manages images, while linked study metadata provide experimental context. Section V names `qbic-pipelines/neuromriprep` as an MRI workflow under development at QBiC, following nf-core principles but not yet part of nf-core.
+
+For this repository, the practical contribution to FAIR (Findable, Accessible, Interoperable, Reusable) data handling is BIDS organization and validation, reproducible processing definitions, and reviewable derivatives. Interpret these as workflow contributions within a larger data lifecycle: controlled access, metadata cataloguing, persistent identifiers, and archival/publication arrangements require the surrounding services. The current entry workflow consumes local DICOM paths; it does not implement OMERO ingestion, REMBI metadata synchronization, or repository deposition. The paper’s broader anonymization description should not be read as a guarantee that this checkout removes every identifying metadata field.
+
+The connection to NFDI is alignment with its research data management goals, rather than an ownership claim. [NFDI4BIOIMAGE](https://www.nfdi.de/consortia-nfdi4bioimage/?lang=en) emphasizes standardized formats, metadata, analysis provenance, and reusable workflows for bioimaging. Those aims provide relevant context for this architecture; the cited paper identifies the deployment as de.NBI/QBiC infrastructure and does not establish neuromriprep as an NFDI service. See the [full reference](../CITATIONS.md#fair-oriented-research-data-management).
+
 ## Production stages
 
 | Stage            | Implementation                                                            | Behavior                                                                                                                                                                     |

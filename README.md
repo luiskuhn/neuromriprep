@@ -7,7 +7,13 @@
 
 **neuromriprep** is a Nextflow DSL2 workflow for preparing structural and functional brain MRI data for research. It converts DICOM acquisitions to BIDS, validates the assembled dataset, runs MRIQC and fMRIPrep, and produces defaced anatomical images. A separate workflow compares four defacing methods on the same T1w images.
 
-This repository is a development pipeline built from the nf-core template. The current `dev` implementation contains IRTG-specific paths and processing rules: a fresh clone requires local configuration and study inputs before it can run. Start with the [technical setup and usage guide](docs/usage.md); the bundled `test` profile still contains sequencing-template data and is not an MRI smoke test.
+This development pipeline follows nf-core design principles but is not an nf-core release. The `dev` branch requires site-specific configuration and study inputs; follow the guide below before running.
+
+## FAIR research data management context
+
+[Sezer et al. (2026)](https://doi.org/10.5281/zenodo.22099332) describe the IRTG 2804 infrastructure built by QBiC and collaborators on the **de.NBI Cloud**, and identify neuromriprep as an MRI workflow use case. The architecture combines controlled-access computation, OMERO image management, linked study metadata, and containerized Nextflow workflows. Here, neuromriprep provides MRI conversion, validation, preprocessing, and defacing; storage, access control, and metadata services belong to the surrounding infrastructure.
+
+This approach aligns with **NFDI4BIOIMAGE** goals for interoperable formats, metadata, and reproducible image analysis. That is a conceptual alignment: the paper describes a de.NBI/QBiC deployment, not an NFDI-operated service. See [NFDI’s consortium overview](https://www.nfdi.de/consortia-nfdi4bioimage/?lang=en), [workflow/infrastructure boundaries](docs/pipeline.md#fair-oriented-infrastructure-and-nfdi-context), and the [full citation](CITATIONS.md#fair-oriented-research-data-management).
 
 ## Pipeline
 
@@ -15,23 +21,21 @@ This repository is a development pipeline built from the nf-core template. The c
 
 _Production workflow from Böhme (2026), Figure 3.1, printed p. 40. The thesis diagram shows PyDeface; the current production workflow allows four defacer choices. [Figure source details](docs/images/README.md)._
 
-The three branches after the QC gate use the original merged BIDS dataset and can run concurrently. Defacing does not replace fMRIPrep inputs or anonymize every file in the results directory. The default stop flags enable conversion and validation only; use the [checkpoint guide](docs/production_workflow_guide.md) to review each stage before continuing.
+MRIQC, fMRIPrep, and defacing branch from the merged BIDS dataset and can run concurrently. Default stop flags enable conversion and validation only; the staged commands below provide review checkpoints.
 
 ## Example output
 
 ![Example PyDeface output showing sagittal, coronal, and axial slices of a defaced anatomical MRI.](docs/images/thesis-pydeface-example.png)
 
-_Representative defaced anatomical image from Böhme (2026), Figure 3.2, printed p. 48. This illustrates the output appearance; every study still requires visual review for residual facial features and preservation of brain tissue. [Figure source details](docs/images/README.md)._
-
-See the [output guide](docs/output.md) for result locations and the [defacing benchmark](docs/benchmark.md) for comparing methods.
+_PyDeface example from Böhme (2026), Figure 3.2, printed p. 48: sagittal, coronal, and axial slices. [Figure source details](docs/images/README.md)._
 
 ## Step-by-step technical guide
 
-The following example runs one study from DICOM to reviewed derivatives. Replace `/data`, `/srv`, and `/scratch` paths with paths accessible on your execution host and compute nodes. The current development code needs site-specific images and study configuration; completing these prerequisites is necessary before the commands can run.
+Replace `/data`, `/srv`, and `/scratch` with paths accessible on your execution host and compute nodes. Run commands from the cloned repository root.
 
 ### 1. Check prerequisites and clone the pipeline
 
-Use Linux with Nextflow >=25.04.0, a compatible Java installation, and Apptainer. MRIQC invokes Apptainer directly, and fMRIPrep uses Apptainer/Singularity bind options; selecting Docker or Conda alone does not make the whole workflow portable.
+Use Linux, Nextflow >=25.04.0, compatible Java, and Apptainer. The MRIQC/fMRIPrep wrappers require Apptainer-style execution; Docker or Conda alone is insufficient.
 
 ```bash
 java -version
@@ -42,9 +46,9 @@ cd neuromriprep
 git rev-parse HEAD
 ```
 
-Record the commit for reproducibility. Run all remaining Nextflow commands from this repository root. The bundled `test` and `test_full` profiles still contain template configuration and are not MRI smoke tests.
+Record the commit. The bundled `test`/`test_full` profiles are template configurations, not MRI smoke tests.
 
-Prepare sufficient compute and scratch storage: the current settings request 16 CPUs/30 GB for MRIQC participant processing and 16 CPUs/60 GB per fMRIPrep task. Multiple branches may run concurrently. The merge task uses GNU `cp --reflink=always`, so the work filesystem must support reflinks; it has no ordinary-copy fallback. Test the chosen scratch location using small files:
+Defaults request 16 CPUs/30 GB for MRIQC participant processing and 16 CPUs/60 GB per fMRIPrep task. Allow for concurrent branches. Dataset assembly requires GNU `cp --reflink=always`; test your scratch filesystem (there is no copy fallback):
 
 ```bash
 mkdir -p /scratch/neuromriprep-work
@@ -54,7 +58,7 @@ cp --reflink=always /scratch/neuromriprep-work/reflink-source.txt /scratch/neuro
 
 ### 2. Organize the input DICOM data
 
-Each input directory represents one participant/session. This is an illustrative layout; series subdirectory names are scanner-specific, while the participant/session directory basename is parsed by the pipeline:
+Use one DICOM directory per participant/session. Series subdirectories are illustrative and scanner-specific:
 
 ```text
 /data/study/
@@ -75,9 +79,9 @@ Each input directory represents one participant/session. This is an illustrative
 └── license.txt
 ```
 
-Use actual DICOM files, not an existing BIDS or NIfTI-only dataset: the current entry workflow does not expose a BIDS-input mode. The conversion configuration maps scanner series to BIDS entities; folder names such as `T1w_series` do not perform that mapping by themselves.
+The entry workflow accepts DICOM, not existing BIDS/NIfTI datasets. Series-to-BIDS mapping comes from the conversion configuration, not the series folder names.
 
-The parser splits the input directory basename on `_`. The second component is the subject; the third must contain `S` followed by the session number. Thus `STUDY_001_S01` becomes `sub-001/ses-01`. Use a study prefix without underscores, subject labels without `sub-`, and unambiguous session names. Missing/unrecognized components can silently fall back to subject `unknown` or session `01`. Avoid whitespace in paths for the current shell wrappers.
+Names must follow `STUDY_001_S01` → `sub-001/ses-01`: the second underscore-separated component is the subject, and the third contains `S` plus session digits. Avoid underscores in the study prefix, `sub-` in the subject component, and whitespace in paths. Malformed names can silently become subject `unknown` or session `01`.
 
 ### 3. Create the samplesheet and study configuration
 
@@ -89,20 +93,15 @@ STUDY,/data/study/dicom/STUDY_001_S01
 STUDY,/data/study/dicom/STUDY_002_S01
 ```
 
-| Column      | Required content                                                            |
-| ----------- | --------------------------------------------------------------------------- |
-| `project`   | Study label carried in metadata; all rows are merged into one dataset.      |
-| `dicom_dir` | Existing directory containing one participant/session's DICOM acquisitions. |
+All rows form one study dataset. Start small, avoid duplicate participant/session rows, and resolve the [fMRIPrep duplicate-task limitation](docs/pipeline.md#current-development-limitations) before processing multiple sessions per subject.
 
-Use one study per run and no duplicate participant/session rows. Start with a small representative subset. Before using multiple sessions for the same subject with fMRIPrep, resolve the [current duplicate-task limitation](docs/pipeline.md#current-development-limitations): its wrapper does not deduplicate participant jobs across input rows.
+Obtain a reviewed `dcm2bids_config.json` for your scanner protocol. Its `descriptions` array defines series matching, BIDS entities, and field-map associations. Check the pipeline’s [session-specific field-map edits and postprocessing](docs/pipeline.md#production-stages) against your acquisitions.
 
-Prepare `/data/study/dcm2bids_config.json` using your scanner protocol. It must contain a `descriptions` array defining series matching, BIDS datatypes/suffixes/entities, and the appropriate field-map associations. Obtain a reviewed study mapping from your site maintainer; a generic mapping is not sufficient. The pipeline modifies field-map identifiers per session and applies [study-specific postprocessing](docs/pipeline.md#production-stages), which you must check against your acquisitions.
-
-For fMRIPrep, obtain a valid FreeSurfer license at `/data/study/license.txt`. Create `/data/study/bids_filter.json` containing `{}` for an unrestricted filter, or provide a reviewed filter for the intended acquisitions. An explicit filter avoids the missing default `assets/empty_bids_filter.json` and site-specific `ses01`/`ses02` aliases.
+For fMRIPrep, provide a valid FreeSurfer `license.txt` and `bids_filter.json` (`{}` for unrestricted input, or a reviewed acquisition filter). The default filter is absent; the `ses01`/`ses02` aliases use institutional paths.
 
 ### 4. Create the local validation policies
 
-From the repository root, create these files if they do not exist (the directory is Git-ignored):
+Create the required files without overwriting existing policies (this directory is Git-ignored):
 
 ```bash
 mkdir -p assets/input_pipeline
@@ -111,11 +110,11 @@ touch assets/input_pipeline/bidsignore_remove.txt
 touch assets/input_pipeline/bidsval_allowlist.txt
 ```
 
-Use one pattern per line in `bidsignore_list.txt` to exclude a path from validation; use one exact entry per line in `bidsignore_remove.txt` to remove an exclusion. In `bidsval_allowlist.txt`, list only warning codes you have reviewed and accepted. Empty files start with no exceptions. Errors cannot be allowlisted, and an exception does not repair the underlying data.
+Use one entry per line: `bidsignore_list.txt` adds validation exclusions; `bidsignore_remove.txt` removes exact entries; `bidsval_allowlist.txt` accepts reviewed warning codes. Empty files mean no exceptions. Errors cannot be allowlisted.
 
 ### 5. Configure containers and resources
 
-Save the following as `site.config` in the repository root, replacing the example paths with existing images and a populated TemplateFlow cache. Obtain the required SIF images from your site maintainer; this repository does not ship portable builds of all custom images. The helper image needs Bash, jq, and GNU coreutils; the validator image needs Bash and `bids-validator`.
+Save as `site.config`, using existing SIF images from your site maintainer and a populated TemplateFlow cache. The helper image needs Bash, jq, and GNU coreutils; the validator needs Bash and `bids-validator`.
 
 ```groovy
 process {
@@ -149,9 +148,9 @@ process {
 }
 ```
 
-Most declared `*_container` parameters are not wired into their modules; use the process `ext.container` settings above. MRIQC participant processing instead uses `mriqc_container` in the parameter file below. **MRIQC group processing still hard-codes `/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif`**: that image must exist at that path on the execution host, or the wrapper must be adapted before running MRIQC at another site. Changing `mriqc_container` alone does not fix the group stage.
+Use `ext.container`; most declared `*_container` parameters are unwired. MRIQC participant uses `mriqc_container` below, but **MRIQC group hard-codes `/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif`**. Provide that image at that path or adapt the wrapper; changing the participant parameter does not fix group processing.
 
-Ensure the TemplateFlow cache contains the references needed for the requested output spaces. For HPC execution, add your scheduler executor, queue/account, and storage bindings to `site.config`; otherwise tasks run locally. The example limits fMRIPrep concurrency to one task, but other branches can still run alongside it.
+For HPC, add the scheduler executor, queue/account, and storage bindings; otherwise execution is local. This example limits fMRIPrep to one concurrent task.
 
 ### 6. Save the run parameters
 
@@ -179,15 +178,15 @@ ignore_fmriprep_fail: false
 deface_tool: pydeface
 ```
 
-The null participant lists select all available participants for each branch and override missing institutional list files. The example opts out of the default behavior that can ignore fMRIPrep failures. Production defacers are `pydeface`, `mri_deface`, `fsl_deface`, and `afni_refacer`; alternatives need their own image and reference configuration. See the [parameter reference](docs/usage.md#operational-parameter-reference).
+Null lists select all participants and override missing institutional files. `ignore_fmriprep_fail: false` makes failures terminate the run. Alternative defacers (`mri_deface`, `fsl_deface`, `afni_refacer`) require corresponding images/references; see the [parameter reference](docs/usage.md#operational-parameter-reference).
 
-Check configuration resolution before processing data:
+Resolve and inspect the configuration before running:
 
 ```bash
 nextflow config . -profile apptainer -c site.config -flat > resolved.config.txt
 ```
 
-Inspect the process overrides. This does not validate your DICOM mapping, image availability, or successful pipeline execution.
+This checks configuration resolution, not data or image availability.
 
 ### 7. Convert DICOM to BIDS and review validation
 
@@ -197,7 +196,7 @@ nextflow run . -profile apptainer -c site.config -params-file params.yaml \
   --stop_bidsval true --stop_mriqc true --stop_fmriprep true
 ```
 
-Under `/data/study/results`, inspect `sub-*/ses-*/`, `dataset_validation_log.txt`, and `bids_qc_summary.txt`. Check acquisition completeness and field-map associations, and require `check_passed: True` before continuing. A rejected gate filters downstream data and can still leave a successful Nextflow exit. Fix source data/configuration and rerun with `-resume`; do not assume edits to published results will be used by cached upstream tasks.
+In `/data/study/results`, check `sub-*/ses-*/`, field-map associations, `dataset_validation_log.txt`, and `bids_qc_summary.txt`. Require `check_passed: True`: gate rejection can still yield a successful Nextflow exit. Correct source inputs/configuration, not published copies, then rerun with `-resume`.
 
 ### 8. Run MRIQC and inspect image quality
 
@@ -207,7 +206,7 @@ nextflow run . -profile apptainer -c site.config -params-file params.yaml \
   --stop_bidsval false --stop_mriqc true --stop_fmriprep true
 ```
 
-Review participant HTML reports, image-quality metrics, and group reports under `derivatives/mriqc/`. Assess artifacts, motion, coverage, and outliers for your study; MRIQC does not automatically exclude scans. Keep both skip flags false and `stop_fmriprep` true here: `stop_mriqc` alone does not block the independent defacing branch.
+Review reports and metrics in `derivatives/mriqc/` for artifacts, motion, coverage, and outliers; scans are not automatically excluded. Keep both skip flags false and `stop_fmriprep` true: `stop_mriqc` alone does not block defacing.
 
 ### 9. Run fMRIPrep and inspect preprocessing
 
@@ -217,7 +216,7 @@ nextflow run . -profile apptainer -c site.config -params-file params.yaml \
   --stop_bidsval false --stop_mriqc false --stop_fmriprep true
 ```
 
-Review HTML reports under `derivatives/fmriprep/`, including registration, normalization, segmentation, functional preprocessing, and confounds. Confirm that every requested participant completed before moving on.
+Review `derivatives/fmriprep/` reports for registration, normalization, segmentation, and confounds. Confirm completion for every requested participant.
 
 ### 10. Deface anatomical images and review the results
 
@@ -228,11 +227,11 @@ nextflow run . -profile apptainer -c site.config -params-file params.yaml \
   --deface_tool pydeface
 ```
 
-Inspect `derivatives/defaces/sub-*/ses-*/anat/` for residual facial features and unintended brain-tissue removal. Production does not automatically run the benchmark's renderer or detector. Original BIDS images and other outputs remain present; defacing these copies does not make the whole result directory ready for public sharing.
+Inspect `derivatives/defaces/sub-*/ses-*/anat/` for residual facial features and lost brain tissue. Original BIDS images remain; review the specific files intended for sharing. Production does not run the benchmark renderer/detector.
 
-All three downstream branches consume the same merged BIDS dataset. Setting all stop flags false on a fresh run enables concurrent branches, without intermediate human review. The staged commands above implement review by resuming after each inspection. Keep the same launch directory, `.nextflow/` cache, and work directory for `-resume`.
+For `-resume`, retain the launch directory, `.nextflow/` cache, and work directory. Enabling all stages on a fresh run permits concurrent processing without review pauses.
 
-Retain the commit, parameter/configuration files, image identities, and reports with your study. See [output diagnostics and execution reports](docs/output.md), [alternative stop/skip combinations](docs/production_workflow_guide.md#other-execution-patterns), and [troubleshooting](docs/usage.md#troubleshooting-and-reproducibility).
+Archive the commit, parameters/configuration, image identities, and reports. Consult [output diagnostics](docs/output.md), [stop/skip combinations](docs/production_workflow_guide.md#other-execution-patterns), and [troubleshooting](docs/usage.md#troubleshooting-and-reproducibility).
 
 ## Documentation
 

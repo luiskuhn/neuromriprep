@@ -1,5 +1,11 @@
 # nf-core/neuromriprep: Citations
 
+## FAIR-oriented research data management
+
+> Sezer, Z. H., Krüger, J., Goll, N., Kimmig, A.-C. S., Derntl, B., Kuhn Cuellar, L., Schwitalla, C., Boehme, L., & Nahnsen, S. (2026). _de.NBI Cloud Enables FAIR-oriented Management and Reproducible Workflows for Sensitive Bioimage Data in Mental Health Studies_. 18th International Workshop on Science Gateways (IWSG2026). Zenodo. [doi:10.5281/zenodo.22099332](https://doi.org/10.5281/zenodo.22099332).
+
+The paper describes the IRTG 2804 de.NBI/QBiC infrastructure and discusses neuromriprep in §V. It is an infrastructure reference, not a release DOI for this repository. For the related NFDI goals, see the official [NFDI4BIOIMAGE consortium description](https://www.nfdi.de/consortia-nfdi4bioimage/?lang=en).
+
 ## [nf-core](https://pubmed.ncbi.nlm.nih.gov/32055031/)
 
 > Ewels PA, Peltzer A, Fillinger S, Patel H, Alneberg J, Wilm A, Garcia MU, Di Tommaso P, Nahnsen S. The nf-core framework for community-curated bioinformatics pipelines. Nat Biotechnol. 2020 Mar;38(3):276-278. doi: 10.1038/s41587-020-0439-x. PubMed PMID: 32055031.
