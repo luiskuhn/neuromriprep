@@ -23,6 +23,12 @@ _Production workflow from Böhme (2026), Figure 3.1, printed p. 40. The thesis d
 
 MRIQC, fMRIPrep, and defacing branch from the merged BIDS dataset and can run concurrently. Default stop flags enable conversion and validation only; the staged commands below provide review checkpoints.
 
+### Defacing benchmark
+
+![Thesis metro diagram comparing PyDeface, AFNI Refacer, MRI Deface, and FSL Deface, with rendering, metrics, and automated detection.](docs/images/thesis-benchmark-metro.png)
+
+_Benchmark workflow from Böhme (2026), Figure 3.3, printed p. 49. The BIDS QC gate shown in this thesis diagram is not executed by the current benchmark code; validation runs without production-gate enforcement. See the [benchmark guide](docs/benchmark.md) and [figure source details](docs/images/README.md)._
+
 ## Example output
 
 ![Example PyDeface output showing sagittal, coronal, and axial slices of a defaced anatomical MRI.](docs/images/thesis-pydeface-example.png)
