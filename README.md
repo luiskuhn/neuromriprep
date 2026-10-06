@@ -23,11 +23,99 @@ _Production workflow from Böhme (2026), Figure 3.1, printed p. 40. The thesis d
 
 MRIQC, fMRIPrep, and defacing branch from the merged BIDS dataset and can run concurrently. Default stop flags enable conversion and validation only; the staged commands below provide review checkpoints.
 
-### Defacing benchmark
+## Defacing benchmark
+
+The `benchmark_defacing` mode helps select and review a defacing method for your study. It converts DICOM to BIDS, applies **PyDeface, AFNI Refacer, MRI Deface, and FSL Deface** to the same original T1w images, and compares their outputs using visual renderings, image-change metrics, and an automated detector. It does not run MRIQC or fMRIPrep.
 
 ![Thesis metro diagram comparing PyDeface, AFNI Refacer, MRI Deface, and FSL Deface, with rendering, metrics, and automated detection.](docs/images/thesis-benchmark-metro.png)
 
-_Benchmark workflow from Böhme (2026), Figure 3.3, printed p. 49. The BIDS QC gate shown in this thesis diagram is not executed by the current benchmark code; validation runs without production-gate enforcement. See the [benchmark guide](docs/benchmark.md) and [figure source details](docs/images/README.md)._
+_Benchmark workflow from Böhme (2026), Figure 3.3, printed p. 49. The BIDS QC gate shown in this thesis diagram is not executed by the current benchmark code; validation runs without production-gate enforcement. [Figure source details](docs/images/README.md)._
+
+### 1. Prepare benchmark inputs
+
+Follow the common [environment setup](#1-check-prerequisites-and-clone-the-pipeline), [DICOM naming](#2-organize-the-input-dicom-data), [conversion configuration](#3-create-the-samplesheet-and-study-configuration), and [local policy-file setup](#4-create-the-local-validation-policies). Use a small representative subset from one study and save `/data/study/benchmark_samplesheet.csv`:
+
+```csv
+project,dicom_dir
+STUDY,/data/study/dicom/STUDY_001_S01
+STUDY,/data/study/dicom/STUDY_002_S01
+```
+
+Each selected subject/session must produce an original `anat/*_T1w.nii.gz` image after conversion. Missing anatomical directories or nonmatching files yield no benchmark inputs for that row. Avoid duplicate rows. This mode starts from DICOM, not pre-existing NIfTI/BIDS directories; the samplesheet selects the cohort. Production participant lists, stop/skip flags, and `deface_tool` do not limit the four-method comparison.
+
+### 2. Configure the benchmark environment
+
+Save `benchmark.config`, replacing the paths with compatible images available on every execution node:
+
+```groovy
+process {
+    withName: 'DCM2BIDS_CONFIG|DCM2BIDS_POSTPROC|MERGE_BIDS_DATASET|BIDSIGNORE' {
+        ext.container = '/srv/containers/docker-curl-jq.sif'
+    }
+    withName: 'DCM2BIDS' {
+        ext.container = '/srv/containers/dcm2bids_3.2.0.sif'
+    }
+    withName: 'BIDS_VALIDATOR' {
+        ext.container = '/srv/containers/bidsvalidator_bash.sif'
+    }
+    withName: 'PYDEFACE' {
+        ext.container = '/srv/containers/pydeface_3.0.sif'
+    }
+    withName: 'MRI_DEFACE' {
+        ext.container = '/srv/containers/mri_deface.sif'
+    }
+    withName: 'FSL_DEFACE' {
+        ext.container = '/srv/containers/fsl_deface.sif'
+    }
+    withName: 'AFNI_REFACER' {
+        ext.container = '/srv/containers/afni_refacer_pennlinc.sif'
+    }
+    withName: 'DEFACE_QC_RENDER|DEFACE_METRICS' {
+        ext.container = '/srv/containers/deface_benchmark.sif'
+    }
+    withName: 'DEFACE_DETECTOR' {
+        ext.container = '/srv/containers/deface_detector.sif'
+    }
+    withName: 'PYDEFACE|MRI_DEFACE|FSL_DEFACE|AFNI_REFACER' {
+        maxForks = 1
+    }
+}
+```
+
+These are example filenames, not bundled images or verified version identifiers. The helper image needs Bash, jq, and GNU coreutils. MRI Deface needs its brain/face templates; defaults are `/opt/mri_deface/talairach_mixed_with_skull.gca` and `/opt/mri_deface/face.gca` inside its image. Override `mri_deface_brain_template` and `mri_deface_face_template` in the parameter file if necessary, using paths visible inside the container.
+
+The rendering/metrics and detector images must provide the dependencies described in the [benchmark setup guide](docs/benchmark.md#setup-and-execution). `MERGE_BENCHMARK` runs Python 3 with pandas on its execution host because it has no container directive; install those there or set a suitable `container` for that process. Add your site's executor and storage settings for HPC. The example allows one task **per defacer** concurrently, not one task for the entire workflow.
+
+### 3. Execute and resume
+
+Save `benchmark_params.yaml`:
+
+```yaml
+mode: benchmark_defacing
+input: /data/study/benchmark_samplesheet.csv
+outdir: /data/study/benchmark-results
+dcm2bids_config: /data/study/dcm2bids_config.json
+```
+
+Run from the repository root, using a separate work directory on the tested reflink-capable filesystem:
+
+```bash
+nextflow run . -profile apptainer -c benchmark.config \
+  -params-file benchmark_params.yaml \
+  -work-dir /scratch/neuromriprep-benchmark-work
+```
+
+To resume after correcting a failure, rerun the same command with `-resume`. Retain `.nextflow/` and the work directory. The production warning allowlist and optional output-patch subworkflow are not used in this mode; inspect the validator log in its task directory.
+
+### 4. Review the comparison
+
+Under `/data/study/benchmark-results`, inspect:
+
+- `benchmark_defacing/qc/*.png`: compare original and defaced images for residual facial structure and unwanted tissue removal.
+- `benchmark_defacing/metrics/benchmark_per_subject_method.csv`: check completeness and individual results before interpreting `benchmark_defacing/summary/benchmark_summary_by_method.csv`.
+- `benchmark_defacedet/defacedet/<method>/*.deface_qc.json` and `*.deface_qc_pass.txt`: detector scores and decisions at the wrapper's threshold of **0.5**. The thesis's subsequent analysis used **0.85**, which is not the runtime default.
+
+Require a result for every intended image and all four methods. Verify where the defaced images were published: the current publisher has a [method-specific layout limitation](docs/output.md#benchmark-outputs), while individual task directories retain their outputs. High detector scores and small image differences do not establish successful anonymization; combine them with visual review before selecting a production defacer. See the [full benchmark guide](docs/benchmark.md) for interpretation and limitations.
 
 ## Example output
 

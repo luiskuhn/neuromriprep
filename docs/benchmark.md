@@ -12,6 +12,8 @@ _Böhme (2026), Figure 3.3, printed p. 49. This is the thesis diagram: its BIDS 
 
 ## Setup and execution
 
+For a dedicated `benchmark.config`, minimal parameter file, and end-to-end commands, follow the [README benchmark walkthrough](../README.md#defacing-benchmark). The instructions below show the alternative of extending an existing production configuration.
+
 1. Complete the common [technical setup](usage.md): samplesheet, conversion configuration, ignore files, compatible scratch storage, and Apptainer.
 2. Configure all four defacer images and the rendering/metrics/detector environments. Their default SIF paths are institutional; the following additional `site.config` entries illustrate overrides (replace the paths).
 
