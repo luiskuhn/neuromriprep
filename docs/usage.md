@@ -176,6 +176,10 @@ nextflow config . -profile apptainer -c site.config -flat > resolved.config.txt
 
 Inspect resolved process overrides. This checks configuration resolution, not availability of images, correctness of input data, or success of the pipeline. Follow the [production workflow guide](production_workflow_guide.md) for the actual commands and review checkpoints.
 
+## Standalone application diagnostics
+
+The [integrated container guide](prototype-notes.md#standalone-container-guide-retained-from-the-prototype) includes the precursor’s applicable technical instructions directly in this repository: image preparation, DICOM layout, conversion, validation and field-map repair, individual/project MRIQC, participant-level fMRIPrep, and PyDeface execution. Commands are adapted to the current code and use separate scratch outputs. Use them to diagnose an application; use the staged Nextflow guide for production orchestration.
+
 ## Operational parameter reference
 
 | Parameter                                                  | Default / effect                                                                                                                        |
