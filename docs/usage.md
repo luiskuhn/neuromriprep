@@ -118,6 +118,8 @@ fMRIPrep requires a valid FreeSurfer license and a populated TemplateFlow cache 
 
 ### Container preparation and checks
 
+For the clinical-network constraints, offline provisioning checklist and portable Docker limitations, see [deployment environments](deployment.md). Public-registry pulls below belong on an IT-approved connected preparation system, not inside the restricted clinical execution network.
+
 The prototype’s image-building notes are useful for setup, but its full image set is historical. For dcm2bids, the current default still uses 3.2.0; its [versioned upstream documentation](https://unfmontreal.github.io/Dcm2Bids/3.2.0/how-to/container/) provides this pull pattern:
 
 ```bash
@@ -171,7 +173,7 @@ Use `-params-file` or `--parameter value` for pipeline parameters and `-c` for p
 ## 7. Validate configuration and run in stages
 
 ```bash
-nextflow config . -profile apptainer -c site.config -flat > resolved.config.txt
+nextflow -c site.config config . -profile apptainer -flat > resolved.config.txt
 ```
 
 Inspect resolved process overrides. This checks configuration resolution, not availability of images, correctness of input data, or success of the pipeline. Follow the [production workflow guide](production_workflow_guide.md) for the actual commands and review checkpoints.

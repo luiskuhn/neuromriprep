@@ -75,3 +75,7 @@ Only after manually reviewing all remaining BIDS findings should you consider `-
 ## Resume and completion checklist
 
 Use `nextflow log` to inspect previous runs; `-resume RUN_NAME` selects a particular cache. Keep the launch `.nextflow/` cache and work directory intact. Confirm expected subjects and outputs at each stage, preserve reports, and archive the software/configuration provenance before cleaning work files. See [outputs and diagnostics](output.md).
+
+## Deployment-specific execution
+
+For typed JSON stage settings, approved offline SIF provisioning, the tested Docker subset and its source-level prerequisites, read [deployment environments](deployment.md). Inspect startup skip/gate messages rather than assuming CLI flags took effect. A QC gate failure can finish without downstream defacing; verify expected derivatives before declaring success.
