@@ -35,7 +35,7 @@ _Production workflow from Böhme (2026), Figure 3.1, printed p. 40. The thesis d
 
 MRIQC, fMRIPrep, and defacing branch from the merged BIDS dataset and can run concurrently. Default stop flags enable conversion and validation only; the staged commands below provide review checkpoints.
 
-Container selection is centralized in `conf/modules.config`; each process receives its image from a named `*_container` pipeline parameter. The IRTG SIF paths remain the defaults. `-profile docker` supplies Docker images for MRIQC and fMRIPrep; for other modules, provide compatible Docker image references for the process parameters used by the selected workflow. See the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for the complete mapping and examples.
+Container selection is centralized in `conf/modules.config`; each process receives its image from a named `*_container` pipeline parameter. The existing institutional SIF image locations remain the defaults; DeepDefacer retains its legacy site-specific path. `-profile docker` supplies Docker images for MRIQC and fMRIPrep; for other modules, provide compatible Docker image references for the process parameters used by the selected workflow. See the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for the complete mapping and examples.
 
 ## Defacing benchmark
 
