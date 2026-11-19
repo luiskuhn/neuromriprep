@@ -43,7 +43,7 @@ process MRIQC_GROUP {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        mriqc: "\$(mriqc --version 2>/dev/null | tr -d '\\n' || echo unknown)"
+        mriqc: "\$(mriqc --version 2>/dev/null | tail -n 1 | tr -d '\\n' || echo unknown)"
     END_VERSIONS
     """
 }
