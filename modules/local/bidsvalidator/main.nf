@@ -3,7 +3,6 @@ process BIDS_VALIDATOR {
     tag "${meta.id}"
     label 'process_low'
 
-    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/bidsvalidator_bash.sif' }"
 
     input:
     tuple val(meta), path(input_dir), path(bidsignore_file, stageAs: 'incoming_bidsignore.txt')

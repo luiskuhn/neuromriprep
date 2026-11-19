@@ -6,21 +6,21 @@ This guide complements [technical usage](usage.md) and the [production checkpoin
 
 neuromriprep was developed for [IRTG-2804](https://irtg2804.de/), an international research training group studying women's mental health across reproductive transitions. In its University Hospital clinical deployment, processing must remain within the approved clinical network. Internet and data access are restricted; container images are supplied as IT-approved local `.sif` files. Do not replace these images with public registry downloads on clinical systems or move patient data outside that environment to solve an installation problem.
 
-Apptainer/Singularity is the approved runtime in this setting. Its adoption reflects institutional security and operational policy; it is not a blanket claim that one runtime makes patient data secure. Follow local IT requirements for runtime version, image provenance, privileges, bind mounts, storage and network access. The current wrappers invoke `apptainer` explicitly in some stages, so a machine exposing only a `singularity` executable needs an IT-approved compatibility arrangement.
+Apptainer/Singularity is the approved runtime in this setting. Its adoption reflects institutional security and operational policy; it is not a blanket claim that one runtime makes patient data secure. Follow local IT requirements for runtime version, image provenance, privileges, bind mounts, storage and network access. Container execution is delegated to Nextflow's process `container` directive; fMRIPrep additionally configures a read-only TemplateFlow bind using the selected runtime's syntax.
 
 An international collaborating site may permit Docker. That is a separate deployment decision, not permission to export clinical data. Establish the receiving site's authorization, data-transfer agreement and approved storage before transferring inputs. Defacing alone does not authorize public redistribution or remove identifying metadata.
 
 ## What can actually be configured?
 
-| Stage | Current image mechanism | Portability boundary |
+| Stage | Central image parameter | Current deployment note |
 | --- | --- | --- |
-| Conversion, helper steps, BIDS validator and QC gate | Process-specific `task.ext.container` | Set a local SIF path or a suitable Docker image through `withName`; each image must contain the tools called by that module. |
-| PyDeface | `task.ext.container` | Same override mechanism; image must expose PyDeface, FSL and its runtime environment to a non-interactive task shell. |
-| fMRIPrep | `task.ext.container`, `ext.templateflow_host` | Image configurable, but module `containerOptions` uses Apptainer `--cleanenv -B` syntax. Image substitution alone is insufficient for Docker. License and reference cache remain required. |
-| MRIQC participant | `params.mriqc_container` inside `apptainer run` | Selecting the Docker profile does not replace this nested Apptainer command. |
-| MRIQC group | Embedded `apptainer run` and institutional SIF path | Not fully site-configurable in the current wrapper. The approved path must exist, or a future separately reviewed change is needed. |
+| Conversion and dataset assembly | `dcm2bids_config_container`, `dcm2bids_container`, `dcm2bids_output_patch_container`, `dcm2bids_postproc_container`, `merge_bids_dataset_container` | Defaults point to the IRTG SIF set; external sites must supply compatible images for the enabled processes. |
+| Validation and QC gate | `bidsignore_container`, `bidsvalidator_container`, `bids_qc_gate_container` | The validator image must provide Bash and `bids-validator`; the QC gate image must provide the Python runtime expected by its script. |
+| MRIQC | `mriqc_participant_container`, `mriqc_group_container` | Both stages use Nextflow-managed containers. The Docker profile provides the MRIQC image defaults; an internal Solidfox smoke test completed participant and group stages. |
+| fMRIPrep | `fmriprep_container` | Docker and Apptainer are supported at the process launch level. fMRIPrep still requires a FreeSurfer license and a readable TemplateFlow cache; a Docker fMRIPrep smoke test has not been run. |
+| Defacing and benchmark QC | `pydeface_container`, `mri_deface_container`, `fsl_deface_container`, `afni_refacer_container`, `deepdefacer_container`, `deface_qc_render_container`, `deface_metrics_container`, `deface_detector_container`, `merge_benchmark_container` | Defaults preserve the established SIF setup. An alternate site must supply images containing each module's executable and dependencies. |
 
-Many top-level `*_container` parameters are declared but not consumed by the corresponding modules. Use the source-backed overrides in [usage](usage.md#5-configure-images-resources-and-reference-data); do not assume a plausible parameter name changes an image. Benchmark modules require their own audit and are outside the Docker route below.
+Container selection is centralized in `conf/modules.config`, while parameter defaults are declared in `nextflow.config` and documented in `nextflow_schema.json`. Use the named parameters in a `-params-file` to substitute site images. The Docker profile includes defaults only for MRIQC and fMRIPrep; other Docker images remain a site responsibility. See [container parameters and examples](usage.md#5-configure-images-resources-and-reference-data).
 
 ## Preparing a restricted-network installation
 
@@ -38,31 +38,44 @@ On the clinical execution system, use local paths rather than `docker://`, `oras
 
 The `apptainer pull` examples elsewhere in these docs are **connected preparation examples only**, subject to IT approval; they are not instructions to pull images inside the restricted clinical network.
 
-## Portable Docker route: conversion, validation and PyDeface
+## Portable Docker route: site-specific image configuration
 
-This route was exercised on a native Linux x86-64 host. MRIQC and fMRIPrep were disabled. Docker Desktop on Apple silicon was also exercised with amd64 emulation, but its performance is not representative of native Linux.
+The MRIQC participant and group stages were exercised on a native Linux x86-64 Solidfox host using Docker. That standalone module smoke test is not a full end-to-end pipeline validation. fMRIPrep was not run because no FreeSurfer license was available for the smoke test. Docker Desktop on Apple silicon was also exercised with amd64 emulation, but its performance is not representative of native Linux.
 
 ### Preconditions before claiming an unchanged-source deployment
 
-The study checkout used for that experience included portability fixes: the merge module's `cp --reflink=always` was changed to `--reflink=auto`, and a stray standalone token in its configuration snapshot was removed. These are **not runtime profile settings**, and are not applied by this documentation. The unmodified branch still needs its documented reflink-capable work filesystem and a successful configuration parse. If either fails, stop and record the incompatibility rather than claiming the Docker profile fixes it. Keep any future source patch separately reviewed from clinical deployment changes.
+The earlier Docker experience used a prepared checkout with `cp --reflink=auto`; this branch still requires a reflink-capable work filesystem for dataset assembly. This standardization patch also removes a stray standalone token from `nextflow.config`. These changes do not make the workflow filesystem-independent or establish end-to-end compatibility. Keep runtime configuration distinct from source changes and record the exact workflow revision used.
 
 The site configuration also used `stageInMode = 'copy'` for `DCM2BIDS_POSTPROC`, whose script moves/edits staged files. This is a configuration override and avoids altering upstream files through staged links. Recheck available disk space when using copies.
 
 ### Image preparation
 
-Provide locally built or approved images with explicit versions/digests. Example names below are placeholders, not published images:
+Provide locally built or approved images with explicit versions/digests. Image names below are placeholders, not published images. Put image overrides in `docker-images.json`; do not encode images in `process.ext.container` blocks:
+
+```json
+{
+  "dcm2bids_config_container": "site/neuromriprep-helper:PINNED",
+  "dcm2bids_container": "site/neuromriprep-conversion:PINNED",
+  "dcm2bids_output_patch_container": "site/neuromriprep-conversion:PINNED",
+  "dcm2bids_postproc_container": "site/neuromriprep-helper:PINNED",
+  "merge_bids_dataset_container": "site/neuromriprep-helper:PINNED",
+  "bidsignore_container": "site/neuromriprep-helper:PINNED",
+  "bidsvalidator_container": "site/neuromriprep-validator:PINNED",
+  "bids_qc_gate_container": "site/neuromriprep-python:PINNED",
+  "pydeface_container": "site/neuromriprep-pydeface:PINNED"
+}
+```
+
+For this subset, use a separate `docker-site.config` for resource and staging settings:
 
 ```groovy
-// docker-site.config: replace all image names with prepared local images.
 docker.enabled = true
 apptainer.enabled = false
 executor.queueSize = 8
 executor.cpus = 32
 executor.memory = '200 GB'
 process {
-    executor = 'local'
     withName: 'DCM2BIDS|DCM2BIDS_CONFIG|DCM2BIDS_POSTPROC|MERGE_BIDS_DATASET|BIDSIGNORE|BIDS_QC_GATE' {
-        ext.container = 'site/neuromriprep-conversion:PINNED'
         cpus = 1
         memory = '2 GB'
     }
@@ -72,12 +85,10 @@ process {
     }
     withName: 'DCM2BIDS_POSTPROC' { stageInMode = 'copy' }
     withName: 'BIDS_VALIDATOR' {
-        ext.container = 'site/neuromriprep-validator:PINNED'
         cpus = 2
         memory = '6 GB'
     }
     withName: 'PYDEFACE' {
-        ext.container = 'site/neuromriprep-pydeface:PINNED'
         cpus = 4
         memory = '16 GB'
         maxForks = 8
@@ -116,7 +127,7 @@ Use unquoted JSON booleans (or YAML booleans) in a parameter file. Add study-spe
 ```bash
 nextflow -c docker-site.config config . -profile docker -flat > resolved.config.txt
 nextflow -log run.log run main.nf -profile docker \
-  -c docker-site.config -params-file params.json \
+  -c docker-site.config -params-file docker-images.json \
   -work-dir /data/study/work/run01 \
   -with-report /data/study/reports/run01/report.html \
   -with-trace /data/study/reports/run01/trace.txt \

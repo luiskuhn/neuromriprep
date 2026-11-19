@@ -4,7 +4,6 @@ process DCM2BIDS_CONFIG{
     label 'process_single'
 
     // ubuntu jq container
-    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/docker-curl-jq.sif' }"
 
     input:
     tuple val(meta), path(config_file)

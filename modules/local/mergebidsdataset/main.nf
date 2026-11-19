@@ -2,7 +2,6 @@ process MERGE_BIDS_DATASET {
 
     label 'process_single'
 
-    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/docker-curl-jq.sif' }"
 
     input:
     path sub_dirs,          stageAs: 'in_subjects??/*'

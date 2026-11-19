@@ -38,7 +38,7 @@ A QC gate rejection filters the downstream channel rather than failing the Nextf
 
 ## Current development limitations
 
-- Container defaults and several inputs refer to local `/nic/sw/IRTG` resources. Required study assets are excluded from Git. MRIQC group has a hard-coded image path with no parameter override.
+- Container defaults point to local IRTG images and are now mapped centrally in `conf/modules.config`; replace them through the per-process `*_container` parameters at other sites. Some study assets and reference paths remain site-specific and are excluded from Git.
 - Both modes merge all samplesheet rows into one dataset; use one study per invocation and avoid duplicate subject/session rows.
 - fMRIPrep metadata are not deduplicated by subject. Multiple sessions for the same subject can schedule duplicate participant jobs writing identical published paths. Review or fix task deduplication before a multi-session production run.
 - Each modified dcm2bids configuration is published as `modified_config.json`; multiple rows can overwrite that root filename. Retain the work directory for per-task provenance.

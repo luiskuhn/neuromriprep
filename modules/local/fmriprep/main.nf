@@ -3,7 +3,6 @@ process FMRIPREP {
     tag "${meta.subject}"
     label 'process_high'
 
-    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/fmriprep_24.1.1.sif' }"
 
     containerOptions {
         def tf_host = task.ext.templateflow_host ?: (System.getenv('TEMPLATEFLOW_HOME') ?: '/nic/sw/IRTG/templateflow')

@@ -2,9 +2,6 @@ process PYDEFACE {
 
     tag "${meta.subject}_${meta.session}_${nifti.name}"
 
-    container {
-        task.ext.container ?: '/nic/sw/IRTG/sif/pydeface_3.0.sif'
-    }
 
     cpus   { (params.pydeface_cpus ?: 8) as Integer }
     memory { params.pydeface_mem ?: '8 GB' }

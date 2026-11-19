@@ -76,43 +76,77 @@ For optional participant selection, use one subject label per line, such as `001
 
 ## 5. Configure images, resources, and reference data
 
-Create `site.config`. The following illustrates the actual `task.ext.container` override mechanism. Replace every `/srv` path with an existing, suitable image or reference directory. The helper image must contain Bash, jq, and GNU coreutils, the validator image must contain Bash and `bids-validator`, and each scientific image must expose the executable used in its module.
+Container choices are configured by pipeline parameters and mapped centrally to Nextflow processes in `conf/modules.config`. The IRTG SIF paths below are defaults. To use different images, save only the needed overrides in a parameter file, such as `site-containers.yaml`, and pass it with `-params-file`. Replace `/srv` paths with images available on every execution node.
+
+```yaml
+dcm2bids_config_container: /srv/containers/docker-curl-jq.sif
+dcm2bids_container: /srv/containers/dcm2bids_3.2.0.sif
+dcm2bids_output_patch_container: /srv/containers/dcm2bids_3.2.0.sif
+dcm2bids_postproc_container: /srv/containers/docker-curl-jq.sif
+merge_bids_dataset_container: /srv/containers/docker-curl-jq.sif
+bidsignore_container: /srv/containers/docker-curl-jq.sif
+bidsvalidator_container: /srv/containers/bidsvalidator_bash.sif
+bids_qc_gate_container: /srv/containers/python_3.11.14-trixie.sif
+mriqc_participant_container: /srv/containers/mriqc_25.0.0rc0.sif
+mriqc_group_container: /srv/containers/mriqc_25.0.0rc0.sif
+fmriprep_container: /srv/containers/fmriprep_24.1.1.sif
+pydeface_container: /srv/containers/pydeface_3.0.sif
+mri_deface_container: /srv/containers/mri_deface.sif
+fsl_deface_container: /srv/containers/fsl_deface.sif
+afni_refacer_container: /srv/containers/afni_refacer_pennlinc.sif
+deepdefacer_container: /srv/containers/deepdefacer.sif
+deface_qc_render_container: /srv/containers/deface_benchmark.sif
+deface_metrics_container: /srv/containers/deface_benchmark.sif
+deface_detector_container: /srv/containers/deface_detector.sif
+merge_benchmark_container: /srv/containers/deface_benchmark.sif
+```
+
+The complete process-to-parameter mapping is:
+
+| Process | Parameter | IRTG default |
+| --- | --- | --- |
+| `DCM2BIDS_CONFIG` | `dcm2bids_config_container` | `docker-curl-jq.sif` |
+| `DCM2BIDS` | `dcm2bids_container` | `dcm2bids_3.2.0.sif` |
+| `DCM2BIDS_OUTPUT_PATCH` | `dcm2bids_output_patch_container` | `dcm2bids_3.2.0.sif` |
+| `DCM2BIDS_POSTPROC` | `dcm2bids_postproc_container` | `docker-curl-jq.sif` |
+| `MERGE_BIDS_DATASET` | `merge_bids_dataset_container` | `docker-curl-jq.sif` |
+| `BIDSIGNORE` | `bidsignore_container` | `docker-curl-jq.sif` |
+| `BIDS_VALIDATOR` | `bidsvalidator_container` | `bidsvalidator_bash.sif` |
+| `BIDS_QC_GATE` | `bids_qc_gate_container` | `python_3.11.14-trixie.sif` |
+| `MRIQC_PARTICIPANT` | `mriqc_participant_container` | `mriqc_25.0.0rc0.sif` |
+| `MRIQC_GROUP` | `mriqc_group_container` | `mriqc_25.0.0rc0.sif` |
+| `FMRIPREP` | `fmriprep_container` | `fmriprep_24.1.1.sif` |
+| `PYDEFACE` | `pydeface_container` | `pydeface_3.0.sif` |
+| `MRI_DEFACE` | `mri_deface_container` | `mri_deface.sif` |
+| `FSL_DEFACE` | `fsl_deface_container` | `fsl_deface.sif` |
+| `AFNI_REFACER` | `afni_refacer_container` | `afni_refacer_pennlinc.sif` |
+| `DEEPDEFACER` | `deepdefacer_container` | Site-specific SIF path |
+| `DEFACE_QC_RENDER` | `deface_qc_render_container` | `deface_benchmark.sif` |
+| `DEFACE_METRICS` | `deface_metrics_container` | `deface_benchmark.sif` |
+| `DEFACE_DETECTOR` | `deface_detector_container` | `deface_detector.sif` |
+| `MERGE_BENCHMARK` | `merge_benchmark_container` | `deface_benchmark.sif` |
+
+The optional shared `mriqc_container` overrides both MRIQC-specific parameters when set. The defaults shown in the table correspond to the full paths in `nextflow.config` and are also documented in `nextflow_schema.json`.
+
+For resources, references, and scheduler settings, use `site.config`; container selection no longer needs a `process.ext.container` override. For example:
 
 ```groovy
 process {
-    withName: 'DCM2BIDS_CONFIG|DCM2BIDS_POSTPROC|MERGE_BIDS_DATASET|BIDSIGNORE' {
-        ext.container = '/srv/containers/docker-curl-jq.sif'
-    }
-    withName: 'DCM2BIDS|DCM2BIDS_OUTPUT_PATCH' {
-        ext.container = '/srv/containers/dcm2bids_3.2.0.sif'
-    }
-    withName: 'BIDS_VALIDATOR' {
-        ext.container = '/srv/containers/bidsvalidator_bash.sif'
-    }
-    withName: 'BIDS_QC_GATE' {
-        ext.container = '/srv/containers/python_3.11.14-trixie.sif'
-    }
     withName: 'FMRIPREP' {
-        ext.container = '/srv/containers/fmriprep_24.1.1.sif'
         ext.templateflow_host = '/srv/templateflow'
         cpus = 16
         memory = '60 GB'
         maxForks = 1
     }
-    withName: 'PYDEFACE' {
-        ext.container = '/srv/containers/pydeface_3.0.sif'
-        maxForks = 1
-    }
-    withName: 'MRIQC_PARTICIPANT' {
-        cpus = 16
-        memory = '30 GB'
-    }
+    withName: 'PYDEFACE' { maxForks = 1 }
 }
 ```
 
-For a scheduler, additionally configure your site's executor, queue/account and storage mounts in this file. Without an executor override, tasks run locally. Verify absolute input, scratch, image, and reference paths are accessible on compute nodes.
+With `-profile docker`, MRIQC and fMRIPrep default to Docker image tags; the MRIQC participant/group modules were smoke-tested on Docker, while fMRIPrep still needs a license-enabled launch test. The remaining processes retain their IRTG SIF defaults; for a Docker run, override each image parameter for every process that the selected mode will execute. Those images must contain the same executables, scripts, and dependencies expected by the corresponding module. Keep image references and site-specific overrides in a private parameter file; do not put credentials in the pipeline repository.
 
-The MRIQC and fMRIPrep modules use Nextflow-managed process containers. Their default images remain the IRTG SIF paths, preserving the institutional setup. When `-profile docker` is selected, that profile supplies Docker image defaults for MRIQC and fMRIPrep; it does not change the default Apptainer deployment. Override images with `mriqc_participant_container`, `mriqc_group_container`, the shared MRIQC `mriqc_container`, and `fmriprep_container` parameters when required. Docker images must be available locally or from a registry accessible to Docker.
+For a scheduler, additionally configure the executor, queue/account, and storage mounts in `site.config`. Without an executor override, tasks run locally. Verify absolute input, scratch, image, and reference paths are accessible on compute nodes.
+
+All containerized modules now receive their images through Nextflow's process `container` setting. The IRTG SIF paths remain the defaults, and each process has a documented `*_container` parameter. The `docker` profile changes the runtime and provides Docker image defaults for MRIQC and fMRIPrep. For other modules, provide site-built or otherwise compatible Docker images through the corresponding parameters. Docker images must be available locally or from a registry accessible to Docker.
 
 For example, use the institutional deployment with `-profile apptainer` and its approved local SIF images; use Docker as an alternative with `-profile docker`. Nextflow stages task inputs and outputs into each task container. fMRIPrep's TemplateFlow cache is mounted read-only using Docker bind syntax under Docker and Apptainer bind syntax otherwise. Set `ext.templateflow_host` in `site.config` if the cache is not at the institutional default. Docker image defaults do not make the restricted clinical network internet-accessible; prepare approved images through the site's normal process.
 
@@ -128,7 +162,7 @@ apptainer pull /data/study/containers/dcm2bids_3.2.0.sif docker://unfmontreal/dc
 apptainer exec /data/study/containers/dcm2bids_3.2.0.sif dcm2bids --help
 ```
 
-Set the corresponding `ext.container` path in `site.config`. This prepares the conversion image only; helper, QC, preprocessing, and defacing images still need separate configuration.
+Set `dcm2bids_container` in the site parameter file. This prepares the conversion image only; helper, QC, preprocessing, and defacing images each have their own parameter.
 
 The current validator executes a Bash task script and calls `bids-validator` directly. Do not assume the prototype’s `validator_1.14.13.sif` is interchangeable with `bidsvalidator_bash.sif`. Check a candidate image before using it:
 
@@ -136,7 +170,7 @@ The current validator executes a Bash task script and calls `bids-validator` dir
 apptainer exec /srv/containers/bidsvalidator_bash.sif bash -c 'command -v bids-validator && bids-validator --version'
 ```
 
-Also inspect a representative validation log: [bids_gate.py](../assets/scripts/bids_gate.py) recognizes textual `[ERROR] CODE` and `[WARNING] CODE` entries. A version check alone does not verify compatibility with that parser. Record image checksums and actual tool versions; the MRIQC wrappers currently write a fixed version string, and SIF filenames are not authoritative version records. These examples were checked against documentation/source, not executed with containers here.
+Also inspect a representative validation log: [bids_gate.py](../assets/scripts/bids_gate.py) recognizes textual `[ERROR] CODE` and `[WARNING] CODE` entries. A version check alone does not verify compatibility with that parser. Record image checksums and actual tool versions; the MRIQC wrappers now query the executable version at runtime, while SIF filenames alone are not authoritative version records. These examples were checked against documentation/source, not executed with containers here.
 
 ## 6. Create a parameter file
 
@@ -159,7 +193,6 @@ skip_fmriprep: false
 mriqc_vpn_file: null
 fmriprep_vpn_file: null
 pydeface_vpn_file: null
-mriqc_container: /srv/containers/mriqc_25.0.0rc0.sif
 fmriprep_fs_license: /data/study/license.txt
 fmriprep_bids_filter: /data/study/bids_filter.json
 ignore_fmriprep_fail: false

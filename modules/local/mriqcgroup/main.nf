@@ -2,7 +2,6 @@ process MRIQC_GROUP {
 
     tag "${meta.id ?: meta.project ?: 'dataset'}"
 
-    container "${ task.ext.container ?: params.mriqc_group_container ?: params.mriqc_container ?: '/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif' }"
 
     input:
     tuple val(meta), path(bids_dataset), path(mriqc_participant_out)
