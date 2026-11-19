@@ -2,7 +2,7 @@
 
 ## 1. Prepare the execution environment
 
-Use a Linux machine or HPC environment with Nextflow >=25.04.0, a compatible Java installation, Apptainer on compute-node `PATH`, and access to the study's container images. The current workflow is adapted to local SIF images; it is not a Docker-only quick start. Obtain images and study configuration from your site maintainer. This repository does not provide portable builds of all custom images.
+Use a Linux machine or HPC environment with Nextflow >=25.04.0, compatible Java, and an enabled container runtime. The default deployment uses the IRTG configuration with locally approved SIF images and Apptainer. The `docker` profile is an alternative for sites using Docker; see image configuration below.
 
 Check the installed tools:
 
@@ -112,13 +112,13 @@ process {
 
 For a scheduler, additionally configure your site's executor, queue/account and storage mounts in this file. Without an executor override, tasks run locally. Verify absolute input, scratch, image, and reference paths are accessible on compute nodes.
 
-Most declared `*_container` parameters in `nextflow.config` are **not wired into modules**; passing `--fmriprep_container`, for example, does not change `FMRIPREP`'s image. Use the process overrides above. MRIQC is an exception: its participant wrapper calls `apptainer run` using `--mriqc_container`, while its group wrapper hard-codes `/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif`. Your site must make that group image available at that path, or the wrapper must be changed before running MRIQC elsewhere. A process container override does not replace that embedded command argument.
+The MRIQC and fMRIPrep modules use Nextflow-managed process containers. Their default images remain the IRTG SIF paths, preserving the institutional setup. When `-profile docker` is selected, that profile supplies Docker image defaults for MRIQC and fMRIPrep; it does not change the default Apptainer deployment. Override images with `mriqc_participant_container`, `mriqc_group_container`, the shared MRIQC `mriqc_container`, and `fmriprep_container` parameters when required. Docker images must be available locally or from a registry accessible to Docker.
+
+For example, use the institutional deployment with `-profile apptainer` and its approved local SIF images; use Docker as an alternative with `-profile docker`. Nextflow stages task inputs and outputs into each task container. fMRIPrep's TemplateFlow cache is mounted read-only using Docker bind syntax under Docker and Apptainer bind syntax otherwise. Set `ext.templateflow_host` in `site.config` if the cache is not at the institutional default. Docker image defaults do not make the restricted clinical network internet-accessible; prepare approved images through the site's normal process.
 
 fMRIPrep requires a valid FreeSurfer license and a populated TemplateFlow cache accessible at `ext.templateflow_host` (bound to `/templateflow`). Obtain the license through FreeSurfer and prepare the references required by the selected output spaces. The default license and TemplateFlow paths are institutional. `ses01`/`ses02` filter aliases also resolve to institutional paths: provide your own JSON filter instead.
 
 ### Container preparation and checks
-
-For the clinical-network constraints, offline provisioning checklist and portable Docker limitations, see [deployment environments](deployment.md). Public-registry pulls below belong on an IT-approved connected preparation system, not inside the restricted clinical execution network.
 
 The prototype’s image-building notes are useful for setup, but its full image set is historical. For dcm2bids, the current default still uses 3.2.0; its [versioned upstream documentation](https://unfmontreal.github.io/Dcm2Bids/3.2.0/how-to/container/) provides this pull pattern:
 
@@ -173,14 +173,10 @@ Use `-params-file` or `--parameter value` for pipeline parameters and `-c` for p
 ## 7. Validate configuration and run in stages
 
 ```bash
-nextflow -c site.config config . -profile apptainer -flat > resolved.config.txt
+nextflow config . -profile apptainer -c site.config -flat > resolved.config.txt
 ```
 
 Inspect resolved process overrides. This checks configuration resolution, not availability of images, correctness of input data, or success of the pipeline. Follow the [production workflow guide](production_workflow_guide.md) for the actual commands and review checkpoints.
-
-## Standalone application diagnostics
-
-The [integrated container guide](prototype-notes.md#standalone-container-guide-retained-from-the-prototype) includes the precursor’s applicable technical instructions directly in this repository: image preparation, DICOM layout, conversion, validation and field-map repair, individual/project MRIQC, participant-level fMRIPrep, and PyDeface execution. Commands are adapted to the current code and use separate scratch outputs. Use them to diagnose an application; use the staged Nextflow guide for production orchestration.
 
 ## Operational parameter reference
 

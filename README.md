@@ -35,6 +35,8 @@ _Production workflow from Böhme (2026), Figure 3.1, printed p. 40. The thesis d
 
 MRIQC, fMRIPrep, and defacing branch from the merged BIDS dataset and can run concurrently. Default stop flags enable conversion and validation only; the staged commands below provide review checkpoints.
 
+The default container setup preserves the IRTG deployment with approved local SIF images under Apptainer. Sites that use Docker can select `-profile docker`; this profile provides Docker image defaults for MRIQC and fMRIPrep, whose modules are launched through Nextflow's container support. Other study-specific modules still need suitable site-provided Docker images and process overrides. See the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for both routes.
+
 ## Defacing benchmark
 
 The `benchmark_defacing` mode helps select and review a defacing method for your study. It converts DICOM to BIDS, applies **PyDeface, AFNI Refacer, MRI Deface, and FSL Deface** to the same original T1w images, and compares their outputs using visual renderings, image-change metrics, and an automated detector. It does not run MRIQC or fMRIPrep.
@@ -129,15 +131,11 @@ Under `/data/study/benchmark-results`, inspect:
 
 Require a result for every intended image and all four methods. Verify where the defaced images were published: the current publisher has a [method-specific layout limitation](docs/output.md#benchmark-outputs), while individual task directories retain their outputs. High detector scores and small image differences do not establish successful anonymization; combine them with visual review before selecting a production defacer. See the [full benchmark guide](docs/benchmark.md) for interpretation and limitations.
 
-## Synthetic diagrams of MRI images
+## Example output
 
-![Synthetic diagrams of MRI images: cartoon sagittal and axial views before and after conceptual facial removal, with orange overlays. Not experimental data; not to scale.](docs/images/pydeface-example.png)
+![Example PyDeface output showing sagittal, coronal, and axial slices of a defaced anatomical MRI.](docs/images/thesis-pydeface-example.png)
 
-**Synthetic diagrams of MRI images.** Panels **A–C** illustrate a sagittal view and **D–F** an axial view. Columns show schematic anatomy before facial removal, after removal, and with the illustrative removal region highlighted in orange. These simplified, AI-generated cartoon diagrams explain the concept of defacing; they are **not experimental data or pipeline output**. Orange is not a computed PyDeface mask or a measured voxelwise difference. The diagrams are not to scale.
-
-This branch applies defacing to anatomical images, not functional images or field maps. Actual outputs require whole-volume review for residual identifying features and unintended tissue removal. These diagrams do not demonstrate anonymization efficacy or mask transfer to other modalities.
-
-[Figure caption, provenance and limitations](docs/images/synthetic-defacing-example.md).
+_PyDeface example from Böhme (2026), Figure 3.2, printed p. 48: sagittal, coronal, and axial slices. [Figure source details](docs/images/README.md)._
 
 ## Step-by-step technical guide
 
@@ -145,7 +143,7 @@ Replace `/data`, `/srv`, and `/scratch` with paths accessible on your execution 
 
 ### 1. Check prerequisites and clone the pipeline
 
-Use Linux, Nextflow >=25.04.0, compatible Java, and Apptainer. The MRIQC/fMRIPrep wrappers require Apptainer-style execution; Docker or Conda alone is insufficient.
+Use Linux, Nextflow >=25.04.0, compatible Java, and the selected container runtime. The default IRTG setup uses Apptainer with approved local SIF images. Docker is available as an alternative profile; consult the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for image requirements and process overrides.
 
 ```bash
 java -version
@@ -258,7 +256,7 @@ process {
 }
 ```
 
-Use `ext.container`; most declared `*_container` parameters are unwired. MRIQC participant uses `mriqc_container` below, but **MRIQC group hard-codes `/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif`**. Provide that image at that path or adapt the wrapper; changing the participant parameter does not fix group processing.
+Use `ext.container` for site-specific process images. MRIQC and fMRIPrep now use Nextflow-managed containers; the Docker profile supplies their Docker defaults while the institutional SIF paths remain the non-Docker fallback. The Docker profile does not supply replacement images for every custom module, so configure those process images for your site.
 
 For HPC, add the scheduler executor, queue/account, and storage bindings; otherwise execution is local. This example limits fMRIPrep to one concurrent task.
 

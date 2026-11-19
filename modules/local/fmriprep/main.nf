@@ -8,7 +8,10 @@ process FMRIPREP {
     containerOptions {
         def tf_host = task.ext.templateflow_host ?: (System.getenv('TEMPLATEFLOW_HOME') ?: '/nic/sw/IRTG/templateflow')
         def tf_cont = task.ext.templateflow_cont ?: '/templateflow'
-        return "--cleanenv -B ${tf_host}:${tf_cont}"
+        if (workflow.containerEngine == 'docker') {
+            return "-v ${tf_host}:${tf_cont}:ro"
+        }
+        return "--cleanenv -B ${tf_host}:${tf_cont}:ro"
     }
 
     input:
