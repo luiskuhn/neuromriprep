@@ -2,6 +2,8 @@ process MRIQC_PARTICIPANT {
 
     tag "${meta.id ?: meta.project ?: 'dataset'}"
 
+    container "${ task.ext.container ?: params.mriqc_participant_container ?: params.mriqc_container ?: '/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif' }"
+
     input:
     tuple val(meta), path(bids_dataset), val(participant_labels)
 
@@ -32,13 +34,9 @@ process MRIQC_PARTICIPANT {
     echo "Output directory: \$PWD/mriqc_participant_out" | tee -a "\$LOGFILE"
     echo "Working directory: \$PWD/mriqc_work" | tee -a "\$LOGFILE"
 
-    apptainer run \\
-        -B "\$PWD/mriqc_work:/work_dir" \\
-        -B "\$BIDS_DIR:/input_dir:ro" \\
-        -B "\$PWD/mriqc_participant_out:/output_dir" \\
-        "${params.mriqc_container ?: '/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif'}" \\
-        "/input_dir" \\
-        "/output_dir" \\
+    mriqc \\
+        "\$BIDS_DIR" \\
+        "\$PWD/mriqc_participant_out" \\
         participant \\
         ${labels_arg} \\
         --nprocs "${task.cpus}" \\
@@ -47,12 +45,12 @@ process MRIQC_PARTICIPANT {
         --no-sub \\
         -v \\
         --verbose-reports \\
-        --work-dir "/work_dir" \\
+        --work-dir "\$PWD/mriqc_work" \\
         2> >(grep -Ev 'it/s]' | tee -a "\$LOGFILE" >&2)
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        mriqc: 25.0.0rc0
+        mriqc: "\$(mriqc --version 2>/dev/null | tr -d '\\n' || echo unknown)"
     END_VERSIONS
     """
 }
