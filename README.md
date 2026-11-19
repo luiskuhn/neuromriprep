@@ -129,11 +129,15 @@ Under `/data/study/benchmark-results`, inspect:
 
 Require a result for every intended image and all four methods. Verify where the defaced images were published: the current publisher has a [method-specific layout limitation](docs/output.md#benchmark-outputs), while individual task directories retain their outputs. High detector scores and small image differences do not establish successful anonymization; combine them with visual review before selecting a production defacer. See the [full benchmark guide](docs/benchmark.md) for interpretation and limitations.
 
-## Example output
+## Synthetic diagrams of MRI images
 
-![Example PyDeface output showing sagittal, coronal, and axial slices of a defaced anatomical MRI.](docs/images/thesis-pydeface-example.png)
+![Synthetic diagrams of MRI images: cartoon sagittal and axial views before and after conceptual facial removal, with orange overlays. Not experimental data; not to scale.](docs/images/pydeface-example.png)
 
-_PyDeface example from Böhme (2026), Figure 3.2, printed p. 48: sagittal, coronal, and axial slices. [Figure source details](docs/images/README.md)._
+**Synthetic diagrams of MRI images.** Panels **A–C** illustrate a sagittal view and **D–F** an axial view. Columns show schematic anatomy before facial removal, after removal, and with the illustrative removal region highlighted in orange. These simplified, AI-generated cartoon diagrams explain the concept of defacing; they are **not experimental data or pipeline output**. Orange is not a computed PyDeface mask or a measured voxelwise difference. The diagrams are not to scale.
+
+This branch applies defacing to anatomical images, not functional images or field maps. Actual outputs require whole-volume review for residual identifying features and unintended tissue removal. These diagrams do not demonstrate anonymization efficacy or mask transfer to other modalities.
+
+[Figure caption, provenance and limitations](docs/images/synthetic-defacing-example.md).
 
 ## Step-by-step technical guide
 

@@ -1,4 +1,4 @@
-# Thesis figure sources
+# Documentation figure sources
 
 The following images were extracted from the embedded image objects of the supplied thesis PDF at their original pixel dimensions. They have not been redrawn or altered; page text and captions are not part of these embedded images. Context and attribution accompany each use.
 
@@ -7,7 +7,13 @@ The following images were extracted from the embedded image objects of the suppl
 | Asset                                                   | Thesis figure | Printed page / PDF page | Original dimensions | Use                                    |
 | ------------------------------------------------------- | ------------- | ----------------------- | ------------------- | -------------------------------------- |
 | [Production metro diagram](thesis-production-metro.png) | 3.1           | 40 / 54                 | 1639 × 436 px       | Repository README pipeline overview.   |
-| [PyDeface example](thesis-pydeface-example.png)         | 3.2           | 48 / 62                 | 1002 × 413 px       | Repository README example output.      |
+| [PyDeface example](thesis-pydeface-example.png)         | 3.2           | 48 / 62                 | 1002 × 413 px       | Historical example, retained for attribution.      |
 | [Benchmark metro diagram](thesis-benchmark-metro.png)   | 3.3           | 49 / 63                 | 1117 × 412 px       | Repository README and benchmark guide. |
 
 These are attributed thesis figures, not newly generated pipeline results. The production diagram depicts PyDeface, while the implementation supports additional defacers. The benchmark diagram depicts a BIDS QC gate, but the current benchmark code does not execute that gate. Refer to [pipeline source notes](../pipeline.md#thesis-and-source-notes) and the current workflow code for operational behavior.
+
+## Synthetic diagrams of MRI images
+
+[pydeface-example.png](pydeface-example.png) contains six cartoon diagrams used in the repository README. Simplified sagittal and axial views illustrate anatomy before and after conceptual facial removal, with orange explanatory overlays. These AI-generated diagrams are not experimental data or pipeline output and are not to scale. See the [caption, provenance and limitations](synthetic-defacing-example.md).
+
+The first synthetic draft used Lorena Böhme's Figure 3.2 as a visual reference; the documentation version restyles synthetic drafts as deliberately simplified cartoons. No Hauser images were supplied to the image generator.
