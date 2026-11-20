@@ -35,7 +35,7 @@ _Production workflow from Böhme (2026), Figure 3.1, printed p. 40. The thesis d
 
 MRIQC, fMRIPrep, and defacing branch from the merged BIDS dataset and can run concurrently. Default stop flags enable conversion and validation only; the staged commands below provide review checkpoints.
 
-Container selection is centralized in `conf/modules.config`; each process receives its image from a named `*_container` pipeline parameter. The existing institutional SIF image locations remain the defaults; DeepDefacer retains its legacy site-specific path. `-profile docker` supplies Docker images for MRIQC and fMRIPrep; for other modules, provide compatible Docker image references for the process parameters used by the selected workflow. See the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for the complete mapping and examples.
+Container selection is centralized in `conf/modules.config`; each process receives its image from a named `*_container` pipeline parameter. The existing institutional SIF image locations remain the defaults; DeepDefacer retains its legacy site-specific path. Use `-profile irtg` for the restricted clinical Apptainer deployment (`-profile apptainer` remains a compatible generic alias). `-profile docker` supplies Docker images for MRIQC and fMRIPrep; for other modules, provide compatible Docker image references for the process parameters used by the selected workflow. See the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for the complete mapping and examples.
 
 ## Defacing benchmark
 
@@ -131,7 +131,7 @@ Replace `/data`, `/srv`, and `/scratch` with paths accessible on your execution 
 
 ### 1. Check prerequisites and clone the pipeline
 
-Use Linux, Nextflow >=25.04.0, compatible Java, and the selected container runtime. The default IRTG setup uses Apptainer with approved local SIF images. Docker is available as an alternative profile; consult the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for image requirements and process overrides.
+Use Linux, Nextflow >=25.04.0, compatible Java, and the selected container runtime. The IRTG clinical profile uses Apptainer with approved local SIF images: `-profile irtg`. Docker is available as an alternative profile; consult the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for image requirements and process overrides.
 
 ```bash
 java -version

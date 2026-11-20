@@ -2,7 +2,7 @@
 
 ## 1. Prepare the execution environment
 
-Use a Linux machine or HPC environment with Nextflow >=25.04.0, compatible Java, and an enabled container runtime. The default deployment uses the IRTG configuration with locally approved SIF images and Apptainer. The `docker` profile is an alternative for sites using Docker; see image configuration below.
+Use a Linux machine or HPC environment with Nextflow >=25.04.0, compatible Java, and an enabled container runtime. The IRTG clinical deployment uses `-profile irtg` with locally approved SIF images and Apptainer. The generic `-profile apptainer` remains available as a compatible alias. The `docker` profile is an alternative for sites using Docker; see image configuration below.
 
 Check the installed tools:
 

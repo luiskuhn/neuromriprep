@@ -1,11 +1,11 @@
 # Production workflow: step-by-step execution
 
-Complete the [technical setup](usage.md) first, including the local `site.config`, `params.yaml`, required policy files, images, and fMRIPrep inputs. Commands below run from the repository root. Replace `/scratch/neuromriprep-work` with the same reflink-capable work directory in every invocation. The parameter file must retain `skip_mriqc: false` and `skip_fmriprep: false` for this staged sequence.
+Complete the [technical setup](usage.md) first, including the local `site.config`, `params.yaml`, required policy files, approved images, and reference data for the selected stages. Commands below run from the repository root. Replace `/scratch/neuromriprep-work` with the same reflink-capable work directory in every invocation. Use `-profile irtg` for the restricted clinical deployment; the older `-profile apptainer` remains available. For this full staged sequence, the parameter file must retain `skip_mriqc: false` and `skip_fmriprep: false`.
 
 ## 1. Convert and validate
 
 ```bash
-nextflow run . -profile apptainer -c site.config -params-file params.yaml \
+nextflow run . -profile irtg -c site.config -params-file params.yaml \
   -work-dir /scratch/neuromriprep-work \
   --stop_bidsval true --stop_mriqc true --stop_fmriprep true
 ```
@@ -15,7 +15,7 @@ Check the parsed participant/session names, converted acquisitions, field-map as
 ## 2. Run and review MRIQC
 
 ```bash
-nextflow run . -profile apptainer -c site.config -params-file params.yaml \
+nextflow run . -profile irtg -c site.config -params-file params.yaml \
   -work-dir /scratch/neuromriprep-work -resume \
   --stop_bidsval false --stop_mriqc true --stop_fmriprep true
 ```
@@ -27,7 +27,7 @@ Keep `stop_fmriprep` true here: `stop_mriqc` alone does not disable the independ
 ## 3. Run and review fMRIPrep
 
 ```bash
-nextflow run . -profile apptainer -c site.config -params-file params.yaml \
+nextflow run . -profile irtg -c site.config -params-file params.yaml \
   -work-dir /scratch/neuromriprep-work -resume \
   --stop_bidsval false --stop_mriqc false --stop_fmriprep true
 ```
@@ -37,7 +37,7 @@ Inspect HTML reports under `derivatives/fmriprep/`, registration and normalizati
 ## 4. Generate and review defaced images
 
 ```bash
-nextflow run . -profile apptainer -c site.config -params-file params.yaml \
+nextflow run . -profile irtg -c site.config -params-file params.yaml \
   -work-dir /scratch/neuromriprep-work -resume \
   --stop_bidsval false --stop_mriqc false --stop_fmriprep false \
   --deface_tool pydeface
@@ -59,14 +59,16 @@ With both skip flags false, the following combinations select the intended stage
 
 For an unattended full run, use step 4 without `-resume` for a new run, after validating the study setup. It does not wait for human review between branches.
 
-For conversion/validation followed by defacing only:
+For conversion/validation followed by defacing only, with MRIQC and fMRIPrep disabled (for example, when no FreeSurfer license is provisioned):
 
 ```bash
-nextflow run . -profile apptainer -c site.config -params-file params.yaml \
+nextflow run . -profile irtg -c site.config -params-file params.yaml \
   -work-dir /scratch/neuromriprep-work -resume \
   --stop_bidsval false --skip_mriqc true --skip_fmriprep true \
   --stop_mriqc false --stop_fmriprep false --deface_tool pydeface
 ```
+
+This path still needs the configured conversion, validation, QC-gate and selected defacing images. `skip_fmriprep: true` prevents fMRIPrep tasks from being launched; it does not bypass the BIDS gate. Review the gate before the resumed defacing invocation.
 
 In the current code, fMRIPrep is eligible when `!stop_mriqc || skip_mriqc` and not `skip_fmriprep`; defacing is eligible when `!stop_fmriprep || skip_fmriprep`. All are enclosed by `!stop_bidsval`. Therefore a skip flag is not a pause flag. Explicitly supply the complete combination when deviating from the staged guide.
 

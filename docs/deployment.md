@@ -6,7 +6,7 @@ This guide complements [technical usage](usage.md) and the [production checkpoin
 
 neuromriprep was developed for [IRTG-2804](https://irtg2804.de/), an international research training group studying women's mental health across reproductive transitions. In its University Hospital clinical deployment, processing must remain within the approved clinical network. Internet and data access are restricted; container images are supplied as IT-approved local `.sif` files. Do not replace these images with public registry downloads on clinical systems or move patient data outside that environment to solve an installation problem.
 
-Apptainer/Singularity is the approved runtime in this setting. Its adoption reflects institutional security and operational policy; it is not a blanket claim that one runtime makes patient data secure. Follow local IT requirements for runtime version, image provenance, privileges, bind mounts, storage and network access. Container execution is delegated to Nextflow's process `container` directive; fMRIPrep additionally configures a read-only TemplateFlow bind using the selected runtime's syntax.
+Apptainer/Singularity is the approved runtime in this setting. Use the explicit `-profile irtg`; the generic `-profile apptainer` remains as a backward-compatible alias. The IRTG profile enables Apptainer with automatic mounts and disables the competing container runtimes. Its adoption reflects institutional security and operational policy; it is not a blanket claim that one runtime makes patient data secure. Follow local IT requirements for runtime version, image provenance, privileges, bind mounts, storage and network access. Container execution is delegated to Nextflow's process `container` directive; fMRIPrep additionally configures a read-only TemplateFlow bind using the selected runtime's syntax.
 
 An international collaborating site may permit Docker. That is a separate deployment decision, not permission to export clinical data. Establish the receiving site's authorization, data-transfer agreement and approved storage before transferring inputs. Defacing alone does not authorize public redistribution or remove identifying metadata.
 
@@ -37,6 +37,38 @@ Prepare and record:
 On the clinical execution system, use local paths rather than `docker://`, `oras://` or registry references. Test with outbound access restricted as it will be in production. `NXF_OFFLINE=true` can prevent Nextflow from fetching missing resources, but it does not populate caches and is not a firewall for software inside containers. Keep MRIQC's existing `--no-sub` behavior. Site network controls remain authoritative.
 
 The `apptainer pull` examples elsewhere in these docs are **connected preparation examples only**, subject to IT approval; they are not instructions to pull images inside the restricted clinical network.
+
+## Step-by-step IRTG clinical run
+
+These are operator steps for the clinical compute environment. They must be adapted to local scheduler, storage and security policy. Test the site-specific steps with the radiology/clinical IT team; this guide has not been executed in that environment.
+
+1. **Prepare the approved software environment.** Obtain the approved pipeline checkout/revision, Nextflow and Java installation, Apptainer module, and all required SIF files through the hospital's normal software provisioning process. Keep the source, work, configuration, reports and results on approved storage. Do not pull containers or expose patient inputs to a public registry.
+2. **Check the execution host.** From the repository root, record the revision and check `nextflow -version`, `java -version`, and `apptainer --version`. Confirm that the scheduler allocation, scratch quota, memory and CPU limits match the `site.config`. Verify that required images are readable on compute nodes and record `sha256sum` values and IT provenance.
+3. **Prepare local run configuration.** Create private `site.config` and `params.yaml` files from the examples in [technical usage](usage.md). Set `input`, `outdir`, `dcm2bids_config`, required policy/allowlist files, TemplateFlow cache, and only the container paths needed by enabled stages. Use typed JSON/YAML booleans. Keep these files out of public source control if they contain study paths or metadata.
+4. **Resolve and inspect configuration before submitting.** Run `nextflow config . -profile irtg -c site.config -params-file params.yaml -flat` and review the resolved file for the expected Apptainer runtime, local SIF paths, input/output locations and resource limits. This checks configuration resolution only; it does not prove that images, references or input data are valid.
+5. **Run conversion and validation first.** Set `skip_mriqc: true`, `skip_fmriprep: true` and `enforce_bidsqc_gate: true` in the parameter file, then launch:
+
+   ```bash
+   nextflow run . -profile irtg -c site.config -params-file params.yaml \
+     -work-dir /approved/scratch/neuromriprep-work \
+     --stop_bidsval true --stop_mriqc true --stop_fmriprep true \
+     -with-report /approved/reports/nextflow-report.html \
+     -with-trace /approved/reports/nextflow-trace.txt \
+     -with-timeline /approved/reports/nextflow-timeline.html
+   ```
+
+   Submit through the site-approved scheduler or persistent launcher and retain the session log. Review the BIDS conversion, parsed participant/session labels, metadata, `dataset_validation_log.txt` and `bids_qc_summary.txt`. Continue only after the gate reports `check_passed: True` or an authorized, documented exception.
+6. **Run only the authorized downstream stages.** For a defacing run without MRIQC or fMRIPrep, retain `skip_mriqc: true` and `skip_fmriprep: true`, review the gate, then resume the same session and work directory:
+
+   ```bash
+   nextflow run . -profile irtg -c site.config -params-file params.yaml \
+     -work-dir /approved/scratch/neuromriprep-work -resume \
+     --stop_bidsval false --stop_mriqc false --stop_fmriprep false \
+     --deface_tool pydeface
+   ```
+
+   This allows the enabled defacing branch while keeping fMRIPrep ineligible. If MRIQC is approved and configured, set `skip_mriqc: false` and use the MRIQC review checkpoint in [the production workflow guide](production_workflow_guide.md). fMRIPrep requires a valid FreeSurfer license and complete TemplateFlow resources; do not enable it until the site has provisioned these and the study has authorized its use.
+7. **Review outputs and preserve provenance.** Check the exit status, Nextflow session log, trace, reports, BIDS gate, expected derivative counts, and visual defacing QC. Preserve the exact revision, parameter and site configurations, container checksums, scheduler/resource settings, and work/cache directories until the run is reviewed. Defaced anatomical outputs do not make original data, sidecars, logs or other modalities anonymous.
 
 ## Portable Docker route: site-specific image configuration
 
