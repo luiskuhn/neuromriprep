@@ -1,5 +1,7 @@
 # Docker images used in the Solidfox integration run
 
+“Solidfox” here refers to the remote native Linux x86-64 Docker host used for integration testing (32 CPUs, approximately 252 GiB RAM, Docker 29.0.2, with Nextflow's local executor), not the hospital's clinical compute environment.
+
 The Docker profile supplies upstream MRIQC and fMRIPrep image tags only. The remaining production modules keep their IRTG SIF defaults until overridden through the corresponding `*_container` parameter. This inventory records the Docker image mapping from the completed one-subset Solidfox run; it is not a general Docker profile default set.
 
 ## Module-to-image mapping

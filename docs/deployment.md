@@ -72,6 +72,8 @@ These are operator steps for the clinical compute environment. They must be adap
 
 ## Portable Docker route: site-specific image configuration
 
+**Solidfox** is the name used here for the remote Linux Docker host used for the integration test. It is a native x86-64 machine with 32 CPUs and approximately 252 GiB RAM, running Docker 29.0.2; Nextflow used its local executor. This host is separate from the University Hospital radiology/clinical compute environment and its restricted-network deployment. Results on Solidfox therefore provide Docker-host evidence only, not validation of the clinical Apptainer environment.
+
 Here, “portable” means that a site can select compatible images through pipeline parameters. The Docker profile is **not plug-and-play outside Solidfox**: it supplies default Docker references only for MRIQC and fMRIPrep, while the other process parameters still default to IRTG `.sif` paths. Before running Docker at another site, override every image parameter used by the selected workflow with a Docker image containing the expected executables, scripts, libraries and templates. Verify image architecture, availability, UID/GID and bind-mount behavior on that host. fMRIPrep additionally needs a valid FreeSurfer license and a populated TemplateFlow cache; it was not part of the completed Solidfox run. The successful one-subset test demonstrates this configuration on one Linux host, not universal cross-site compatibility.
 
 The [Solidfox Docker inventory](../assets/examples/docker-solidfox/README.md) lists the exact tested image tags, application versions, image IDs, module assignments and Dockerfile build recipes. It marks the configured-but-uninvoked process and the untested optional modules separately.

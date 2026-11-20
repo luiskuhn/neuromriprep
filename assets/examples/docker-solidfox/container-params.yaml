@@ -1,4 +1,5 @@
-# Container overrides used by the successful Solidfox Docker integration run.
+# Container overrides used by the successful Docker integration run on the
+# remote Solidfox Linux host described in README.md.
 # The hauser/* tags are local build tags; build them with the Dockerfiles in
 # this directory or replace them with images in your own approved registry.
 # fMRIPrep was deliberately disabled because no FreeSurfer license was present.
