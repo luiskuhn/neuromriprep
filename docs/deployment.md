@@ -72,7 +72,9 @@ These are operator steps for the clinical compute environment. They must be adap
 
 ## Portable Docker route: site-specific image configuration
 
-The MRIQC participant and group stages were exercised on a native Linux x86-64 Solidfox host using Docker. That standalone module smoke test is not a full end-to-end pipeline validation. fMRIPrep was not run because no FreeSurfer license was available for the smoke test. Docker Desktop on Apple silicon was also exercised with amd64 emulation, but its performance is not representative of native Linux.
+The production workflow completed a Docker integration run on a native Linux x86-64 Solidfox host (32 CPUs, approximately 252 GiB RAM, Docker 29.0.2, Java 25.0.3 and Nextflow 26.04.6). The run used one restricted internal participant/session test subset; no input images or participant identifiers are included in this repository. Conversion, dataset assembly, validation, the enforced BIDS QC gate, MRIQC participant/group processing and eight PyDeface anatomical-image tasks completed. The gate passed with zero errors; five warnings were all handled by the configured allowlist. MRIQC participant processing took about 35 minutes, group processing about 3 seconds, and individual PyDeface tasks took about 4.5–8 minutes while running concurrently. The resumed pipeline run took about 35 minutes; the first attempt and recovery extended total elapsed time to roughly 43 minutes. fMRIPrep was deliberately skipped because no FreeSurfer license was available. This is a single-subset integration check, not a full-cohort validation or a controlled performance benchmark.
+
+The first attempt exposed that Solidfox's ext4 work volume does not support mandatory reflink cloning. Dataset assembly now uses `cp --reflink=auto`, retaining copy-on-write where available and falling back to ordinary copies; the resumed run completed on ext4. Docker Desktop on Apple silicon was also exercised with amd64 emulation, but its performance is not representative of native Linux.
 
 ### Preconditions before claiming an unchanged-source deployment
 
