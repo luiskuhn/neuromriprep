@@ -212,7 +212,11 @@ Use one entry per line: `bidsignore_list.txt` adds validation exclusions; `bidsi
 
 For the default IRTG deployment, use the approved SIF paths configured in the pipeline. If your site stores the SIF files elsewhere, add the relevant `*_container` overrides to `params.yaml`. The helper image needs Bash, jq, and GNU coreutils; the validator needs Bash and `bids-validator`.
 
-The container parameters in `params.yaml` can override the centralized IRTG defaults. The Docker profile supplies MRIQC and fMRIPrep image defaults; provide a compatible Docker image for every other process used by your run. Put `ext.templateflow_host` and resource overrides in `site.config`, separately from the container parameters:
+The container parameters in `params.yaml` can override the centralized IRTG defaults. With `-profile docker`, the pipeline has upstream `nipreps/mriqc` and `nipreps/fmriprep` image defaults. Nextflow passes these image references to Docker; when an image is not already present locally, Docker pulls it from its registry (Docker Hub for the `nipreps/...` names). The host therefore needs access to the registry unless the images have been staged locally.
+
+The other modules do not automatically use `nipreps` images. Their defaults remain the configured IRTG `.sif` paths, so a Docker run must override the image parameter for every other enabled process with a compatible Docker image. Three Dockerfiles in [`assets/examples/docker-solidfox/`](assets/examples/docker-solidfox/README.md) were used to build the local test images for the conversion/helper tasks, BIDS validator, and PyDeface. A Dockerfile is a build recipe; it is not referenced directly by Nextflow. The build creates a tagged image, and [`container-params.yaml`](assets/examples/docker-solidfox/container-params.yaml) maps those image tags to the pipeline's per-process container parameters. See the linked inventory for the exact module-to-image mapping, versions, build commands, and test status. The `hauser/*` tags are local examples, not public registry references; build them first or replace them with images available to your Docker engine.
+
+Put `ext.templateflow_host` and resource overrides in `site.config`, separately from the container parameters:
 
 ```groovy
 process {
