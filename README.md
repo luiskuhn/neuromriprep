@@ -99,7 +99,7 @@ The rendering/metrics and detector images must provide the dependencies describe
 
 ### 3. Execute and resume
 
-Run from the repository root, using a separate work directory on the tested reflink-capable filesystem:
+Run from the repository root, using a separate work directory with enough capacity for staged and merged BIDS copies. Dataset assembly uses reflinks when supported and falls back to ordinary copies:
 
 ```bash
 nextflow run . -profile apptainer -c benchmark.config \
@@ -144,12 +144,12 @@ git rev-parse HEAD
 
 Record the commit. The bundled `test`/`test_full` profiles are template configurations, not MRI smoke tests.
 
-Defaults request 16 CPUs/30 GB for MRIQC participant processing and 16 CPUs/60 GB per fMRIPrep task. Allow for concurrent branches. Dataset assembly requires GNU `cp --reflink=always`; test your scratch filesystem (there is no copy fallback):
+Defaults request 16 CPUs/30 GB for MRIQC participant processing and 16 CPUs/60 GB per fMRIPrep task. Allow for concurrent branches. Dataset assembly uses GNU `cp --reflink=auto`: it uses copy-on-write where supported and falls back to ordinary copies. Ensure scratch has enough free space for that fallback:
 
 ```bash
 mkdir -p /scratch/neuromriprep-work
 printf 'reflink check\n' > /scratch/neuromriprep-work/reflink-source.txt
-cp --reflink=always /scratch/neuromriprep-work/reflink-source.txt /scratch/neuromriprep-work/reflink-copy.txt
+cp --reflink=auto /scratch/neuromriprep-work/reflink-source.txt /scratch/neuromriprep-work/reflink-copy.txt
 ```
 
 ### 2. Organize the input DICOM data
@@ -258,7 +258,7 @@ Null lists select all participants and override missing institutional files. `ig
 Resolve and inspect the configuration before running:
 
 ```bash
-nextflow config . -profile apptainer -c site.config -flat > resolved.config.txt
+nextflow -c site.config config . -profile irtg -flat > resolved.config.txt
 ```
 
 This checks configuration resolution, not data or image availability.

@@ -14,15 +14,13 @@ apptainer --version
 
 Plan resources before a full run. The current overrides request 16 CPUs and 30 GB for the MRIQC participant task, and 16 CPUs and 60 GB per fMRIPrep task (up to three concurrent tasks). Other branches can run at the same time. Reduce concurrency to fit the host or scheduler; published results and task staging can occupy substantial space. No general disk or runtime estimate has been established.
 
-The merge task uses GNU `cp --reflink=always`, without a fallback. The source and destination task files must support copy-on-write cloning on compatible storage. Check your chosen work filesystem with small disposable files before using imaging data:
+The merge task uses GNU `cp --reflink=auto`: it prefers copy-on-write cloning when supported and falls back to ordinary copies. Ensure the work filesystem has sufficient free space for the fallback, especially when processing large datasets. A small disposable copy can confirm that the filesystem is writable:
 
 ```bash
 mkdir -p /scratch/neuromriprep-work
 printf 'reflink check\n' > /scratch/neuromriprep-work/reflink-source.txt
-cp --reflink=always /scratch/neuromriprep-work/reflink-source.txt /scratch/neuromriprep-work/reflink-copy.txt
+cp --reflink=auto /scratch/neuromriprep-work/reflink-source.txt /scratch/neuromriprep-work/reflink-copy.txt
 ```
-
-If this fails, use compatible storage or resolve the merge implementation with the maintainer before proceeding.
 
 ## 2. Clone the code
 
@@ -206,7 +204,7 @@ Use `-params-file` or `--parameter value` for pipeline parameters and `-c` for p
 ## 7. Validate configuration and run in stages
 
 ```bash
-nextflow config . -profile apptainer -c site.config -flat > resolved.config.txt
+nextflow -c site.config config . -profile irtg -flat > resolved.config.txt
 ```
 
 Inspect resolved process overrides. This checks configuration resolution, not availability of images, correctness of input data, or success of the pipeline. Follow the [production workflow guide](production_workflow_guide.md) for the actual commands and review checkpoints.

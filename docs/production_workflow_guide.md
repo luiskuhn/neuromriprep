@@ -1,6 +1,6 @@
 # Production workflow: step-by-step execution
 
-Complete the [technical setup](usage.md) first, including the local `site.config`, `params.yaml`, required policy files, approved images, and reference data for the selected stages. Commands below run from the repository root. Replace `/scratch/neuromriprep-work` with the same reflink-capable work directory in every invocation. Use `-profile irtg` for the restricted clinical deployment; the older `-profile apptainer` remains available. For this full staged sequence, the parameter file must retain `skip_mriqc: false` and `skip_fmriprep: false`.
+Complete the [technical setup](usage.md) first, including the local `site.config`, `params.yaml`, required policy files, approved images, and reference data for the selected stages. Commands below run from the repository root. Replace `/scratch/neuromriprep-work` with the same sufficiently sized work directory in every invocation; dataset assembly falls back to ordinary copies when reflinks are unavailable. Use `-profile irtg` for the restricted clinical deployment; the older `-profile apptainer` remains available. For this full staged sequence, the parameter file must retain `skip_mriqc: false` and `skip_fmriprep: false`.
 
 ## 1. Convert and validate
 

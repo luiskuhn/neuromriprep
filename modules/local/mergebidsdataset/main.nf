@@ -27,20 +27,21 @@ process MERGE_BIDS_DATASET {
     }
     EOF
 
-    # Merge subjects (copy on write reflinks)
+    # Prefer copy-on-write reflinks where the work filesystem supports them;
+    # otherwise GNU cp transparently falls back to copying file contents.
     for s in ${sub_dirs}; do
       [ -d "\$s" ] || continue
       dest="bids_dataset/\$(basename "\$s")"
       mkdir -p "\$dest"
-      cp -a --reflink=always "\$s/." "\$dest/"
+      cp -a --reflink=auto "\$s/." "\$dest/"
     done
 
-    # Merge ADC derivatives (copy on write reflinks)
+    # Merge ADC derivatives using the same reflink-with-copy fallback.
     for d in ${dwi_adc_sub_dirs}; do
       [ -d "\$d" ] || continue
       dest="bids_dataset/derivatives/dwi_ADC/\$(basename "\$d")"
       mkdir -p "\$dest"
-      cp -a --reflink=always "\$d/." "\$dest/"
+      cp -a --reflink=auto "\$d/." "\$dest/"
     done
 
     # Collect logs
