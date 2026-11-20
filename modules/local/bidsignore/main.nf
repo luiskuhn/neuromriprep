@@ -4,7 +4,6 @@ process BIDSIGNORE {
     label 'process_low'
     stageInMode 'copy'
 
-    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/docker-curl-jq.sif' }"
 
     input:
     tuple val(meta), path(dataset_dir, stageAs: 'bids_dataset')

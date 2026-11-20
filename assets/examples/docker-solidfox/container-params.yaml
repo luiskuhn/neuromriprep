@@ -1,0 +1,16 @@
+# Container overrides used by the successful Docker integration run on the
+# remote Solidfox Linux host described in README.md.
+# The hauser/* tags are local build tags; build them with the Dockerfiles in
+# this directory or replace them with images in your own approved registry.
+# fMRIPrep was deliberately disabled because no FreeSurfer license was present.
+dcm2bids_config_container: hauser/dcm2bids:3.2.0-solidfox-test-02
+dcm2bids_container: hauser/dcm2bids:3.2.0-solidfox-test-02
+dcm2bids_output_patch_container: hauser/dcm2bids:3.2.0-solidfox-test-02
+dcm2bids_postproc_container: hauser/dcm2bids:3.2.0-solidfox-test-02
+merge_bids_dataset_container: hauser/dcm2bids:3.2.0-solidfox-test-02
+bidsignore_container: hauser/dcm2bids:3.2.0-solidfox-test-02
+bidsvalidator_container: hauser/bids-validator:2.5.6-solidfox-test-02
+bids_qc_gate_container: hauser/dcm2bids:3.2.0-solidfox-test-02
+mriqc_participant_container: nipreps/mriqc:25.0.0rc0
+mriqc_group_container: nipreps/mriqc:25.0.0rc0
+pydeface_container: hauser/pydeface:solidfox-test-02

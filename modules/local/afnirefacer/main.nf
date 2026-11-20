@@ -2,7 +2,6 @@ process AFNI_REFACER {
 
     tag "${meta.subject}_${meta.session}_${nifti.name}"
 
-    container { task.ext.container ?: '/nic/sw/IRTG/sif/afni_refacer_pennlinc.sif' }
 
     cpus   { (params.afni_refacer_cpus ?: 8) as Integer }
     memory {  params.afni_refacer_mem  ?: '8 GB' }

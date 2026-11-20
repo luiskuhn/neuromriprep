@@ -3,7 +3,6 @@ process DCM2BIDS_OUTPUT_PATCH {
     tag "${meta.subject}"
     label 'process_low'
 
-    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/dcm2bids_3.2.0.sif' }"
 
     input:
     tuple val(meta), path(bids_session_in, stageAs: 'bids_input')

@@ -214,61 +214,108 @@
     ],
     "properties": {
         "dcm2bids_config_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/docker-curl-jq.sif",
+            "description": "Container image for preparing the dcm2bids configuration. The default is the IRTG SIF; override for another site or runtime."
         },
         "dcm2bids_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/dcm2bids_3.2.0.sif",
+            "description": "Container image for DICOM-to-BIDS conversion."
+        },
+        "dcm2bids_output_patch_container": {
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/dcm2bids_3.2.0.sif",
+            "description": "Container image for the post-conversion BIDS metadata patch."
         },
         "dcm2bids_postproc_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/docker-curl-jq.sif",
+            "description": "Container image for post-processing converted BIDS data."
         },
         "merge_bids_dataset_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/docker-curl-jq.sif",
+            "description": "Container image for merging converted subject datasets."
         },
         "bidsignore_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/docker-curl-jq.sif",
+            "description": "Container image for preparing the dataset .bidsignore file."
         },
         "bidsvalidator_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/bidsvalidator_bash.sif",
+            "description": "Container image for BIDS validation."
         },
         "bids_qc_gate_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/python_3.11.14-trixie.sif",
+            "description": "Container image for the BIDS QC gate and its Python dependencies."
         },
         "mriqc_participant_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif",
+            "description": "Container image for MRIQC participant-level processing."
         },
         "mriqc_group_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif",
+            "description": "Container image for MRIQC group-level processing."
+        },
+        "mriqc_container": {
+            "type": ["string", "null"],
+            "description": "Optional shared MRIQC container override; when set, it takes precedence over the participant- and group-specific parameters."
         },
         "fmriprep_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/fmriprep_24.1.1.sif",
+            "description": "Container image for fMRIPrep."
         },
         "pydeface_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/pydeface_3.0.sif",
+            "description": "Container image for PyDeface."
         },
         "mri_deface_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/mri_deface.sif",
+            "description": "Container image for MRI Deface."
         },
         "fsl_deface_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/fsl_deface.sif",
+            "description": "Container image for FSL defacing."
         },
         "afni_refacer_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/afni_refacer_pennlinc.sif",
+            "description": "Container image for AFNI Refacer."
         },
         "deepdefacer_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/home/loboehme/Documents/container/ownconts/deepdefacer.sif",
+            "description": "Container image for DeepDefacer; the default path is installation-specific."
         },
         "deface_qc_render_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/deface_benchmark.sif",
+            "description": "Container image for rendering defacing QC figures."
         },
         "deface_metrics_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/deface_benchmark.sif",
+            "description": "Container image for calculating defacing image metrics."
         },
         "deface_detector_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/deface_detector.sif",
+            "description": "Container image for automated defacing detection."
         },
         "merge_benchmark_container": {
-            "type": "string"
+            "type": "string",
+            "default": "/nic/sw/IRTG/sif/deface_benchmark.sif",
+            "description": "Container image for merging defacing benchmark outputs."
         },
         "enforce_bidsqc_gate": {
             "type": "boolean",

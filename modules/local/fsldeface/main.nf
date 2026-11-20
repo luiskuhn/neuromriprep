@@ -2,7 +2,6 @@ process FSL_DEFACE {
 
     tag "${meta.subject}_${meta.session}_${nifti.name}"
 
-    container { task.ext.container ?: '/nic/sw/IRTG/sif/fsl_deface.sif' }
 
     cpus   { (params.fsl_deface_cpus ?: 8) as Integer }
     memory {  params.fsl_deface_mem  ?: '8 GB' }

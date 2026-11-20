@@ -2,7 +2,6 @@ process DEEPDEFACER {
 
     tag "${meta.subject}_${meta.session}_${nifti.name}"
 
-    container { task.ext.container ?: '/home/loboehme/Documents/container/ownconts/deepdefacer.sif' }
 
     cpus   { (params.deepdefacer_cpus ?: 8) as Integer }
     memory {  params.deepdefacer_mem  ?: '8 GB' }

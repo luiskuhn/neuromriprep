@@ -2,9 +2,6 @@ process MRI_DEFACE {
 
     tag "${meta.subject}_${meta.session}_${nifti.name}"
 
-    container {
-        task.ext.container ?: '/nic/sw/IRTG/sif/mri_deface.sif'
-    }
 
     cpus   { (params.mri_deface_cpus ?: 8) as Integer }
     memory { params.mri_deface_mem ?: '8 GB' }

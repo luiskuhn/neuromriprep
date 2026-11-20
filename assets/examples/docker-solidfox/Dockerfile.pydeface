@@ -1,0 +1,13 @@
+FROM poldracklab/pydeface@sha256:c648b8d70f31a186ff003ed2ad15d491d7b4a7d9adaa4665cf95526415fe3773
+
+ENV PATH="/app/.pixi/envs/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+    CONDA_PREFIX="/app/.pixi/envs/default" \
+    FSLDIR="/app/.pixi/envs/default" \
+    FSLOUTPUTTYPE="NIFTI_GZ"
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends procps \
+    && rm -rf /var/lib/apt/lists/*
+ENTRYPOINT []
+CMD ["/bin/bash"]

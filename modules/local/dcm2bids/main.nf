@@ -6,7 +6,6 @@ process DCM2BIDS {
 
 
 
-    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/dcm2bids_3.2.0.sif' }"
 
     input:
     // meta + dicom + modified config + force flag
