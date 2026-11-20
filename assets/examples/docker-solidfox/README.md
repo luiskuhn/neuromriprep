@@ -21,11 +21,11 @@ The Solidfox-local image IDs identify those exact built images; they are not pul
 Run from the repository root on a connected, approved build host. The resulting `hauser/*` tags are local example names; retag them for your registry before use elsewhere.
 
 ```bash
-docker build -f examples/docker-solidfox/Dockerfile.dcm2bids \
+docker build -f assets/examples/docker-solidfox/Dockerfile.dcm2bids \
   -t hauser/dcm2bids:3.2.0-solidfox-test-02 .
-docker build -f examples/docker-solidfox/Dockerfile.validator \
+docker build -f assets/examples/docker-solidfox/Dockerfile.validator \
   -t hauser/bids-validator:2.5.6-solidfox-test-02 .
-docker build -f examples/docker-solidfox/Dockerfile.pydeface \
+docker build -f assets/examples/docker-solidfox/Dockerfile.pydeface \
   -t hauser/pydeface:solidfox-test-02 .
 ```
 
