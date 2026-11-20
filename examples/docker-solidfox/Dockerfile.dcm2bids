@@ -1,0 +1,9 @@
+FROM docker.io/unfmontreal/dcm2bids:3.2.0@sha256:23497c22ce4932a1fc2948a51e09e177524cebc40454e8c912884829c88d0727
+
+USER root
+RUN sed -i 's/stable/bookworm/g' /etc/apt/sources.list.d/* \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends jq procps \
+    && rm -rf /var/lib/apt/lists/*
+RUN chmod -R a+rX /dcm2bids
+ENTRYPOINT []
