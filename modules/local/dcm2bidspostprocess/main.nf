@@ -2,7 +2,6 @@ process DCM2BIDS_POSTPROC {
 
     label 'process_single'
 
-    container "${ task.ext.container ?: '/nic/sw/IRTG/sif/docker-curl-jq.sif' }"
 
     input:
     tuple val(meta), path(bids_dir)

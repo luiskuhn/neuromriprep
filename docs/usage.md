@@ -2,7 +2,7 @@
 
 ## 1. Prepare the execution environment
 
-Use a Linux machine or HPC environment with Nextflow >=25.04.0, a compatible Java installation, Apptainer on compute-node `PATH`, and access to the study's container images. The current workflow is adapted to local SIF images; it is not a Docker-only quick start. Obtain images and study configuration from your site maintainer. This repository does not provide portable builds of all custom images.
+Use a Linux machine or HPC environment with Nextflow >=25.04.0, compatible Java, and an enabled container runtime. The IRTG clinical deployment uses `-profile irtg` with locally approved SIF images and Apptainer. The generic `-profile apptainer` remains available as a compatible alias. The `docker` profile is an alternative for sites using Docker; see image configuration below.
 
 Check the installed tools:
 
@@ -14,15 +14,13 @@ apptainer --version
 
 Plan resources before a full run. The current overrides request 16 CPUs and 30 GB for the MRIQC participant task, and 16 CPUs and 60 GB per fMRIPrep task (up to three concurrent tasks). Other branches can run at the same time. Reduce concurrency to fit the host or scheduler; published results and task staging can occupy substantial space. No general disk or runtime estimate has been established.
 
-The merge task uses GNU `cp --reflink=always`, without a fallback. The source and destination task files must support copy-on-write cloning on compatible storage. Check your chosen work filesystem with small disposable files before using imaging data:
+The merge task uses GNU `cp --reflink=auto`: it prefers copy-on-write cloning when supported and falls back to ordinary copies. Ensure the work filesystem has sufficient free space for the fallback, especially when processing large datasets. A small disposable copy can confirm that the filesystem is writable:
 
 ```bash
 mkdir -p /scratch/neuromriprep-work
 printf 'reflink check\n' > /scratch/neuromriprep-work/reflink-source.txt
-cp --reflink=always /scratch/neuromriprep-work/reflink-source.txt /scratch/neuromriprep-work/reflink-copy.txt
+cp --reflink=auto /scratch/neuromriprep-work/reflink-source.txt /scratch/neuromriprep-work/reflink-copy.txt
 ```
-
-If this fails, use compatible storage or resolve the merge implementation with the maintainer before proceeding.
 
 ## 2. Clone the code
 
@@ -76,49 +74,83 @@ For optional participant selection, use one subject label per line, such as `001
 
 ## 5. Configure images, resources, and reference data
 
-Create `site.config`. The following illustrates the actual `task.ext.container` override mechanism. Replace every `/srv` path with an existing, suitable image or reference directory. The helper image must contain Bash, jq, and GNU coreutils, the validator image must contain Bash and `bids-validator`, and each scientific image must expose the executable used in its module.
+Container choices are configured by pipeline parameters and mapped centrally to Nextflow processes in `conf/modules.config`. The IRTG SIF paths below are defaults. To use different images, save only the needed overrides in a parameter file, such as `site-containers.yaml`, and pass it with `-params-file`. Replace `/srv` paths with images available on every execution node.
+
+```yaml
+dcm2bids_config_container: /srv/containers/docker-curl-jq.sif
+dcm2bids_container: /srv/containers/dcm2bids_3.2.0.sif
+dcm2bids_output_patch_container: /srv/containers/dcm2bids_3.2.0.sif
+dcm2bids_postproc_container: /srv/containers/docker-curl-jq.sif
+merge_bids_dataset_container: /srv/containers/docker-curl-jq.sif
+bidsignore_container: /srv/containers/docker-curl-jq.sif
+bidsvalidator_container: /srv/containers/bidsvalidator_bash.sif
+bids_qc_gate_container: /srv/containers/python_3.11.14-trixie.sif
+mriqc_participant_container: /srv/containers/mriqc_25.0.0rc0.sif
+mriqc_group_container: /srv/containers/mriqc_25.0.0rc0.sif
+fmriprep_container: /srv/containers/fmriprep_24.1.1.sif
+pydeface_container: /srv/containers/pydeface_3.0.sif
+mri_deface_container: /srv/containers/mri_deface.sif
+fsl_deface_container: /srv/containers/fsl_deface.sif
+afni_refacer_container: /srv/containers/afni_refacer_pennlinc.sif
+deepdefacer_container: /srv/containers/deepdefacer.sif
+deface_qc_render_container: /srv/containers/deface_benchmark.sif
+deface_metrics_container: /srv/containers/deface_benchmark.sif
+deface_detector_container: /srv/containers/deface_detector.sif
+merge_benchmark_container: /srv/containers/deface_benchmark.sif
+```
+
+The complete process-to-parameter mapping is:
+
+| Process | Parameter | IRTG default |
+| --- | --- | --- |
+| `DCM2BIDS_CONFIG` | `dcm2bids_config_container` | `docker-curl-jq.sif` |
+| `DCM2BIDS` | `dcm2bids_container` | `dcm2bids_3.2.0.sif` |
+| `DCM2BIDS_OUTPUT_PATCH` | `dcm2bids_output_patch_container` | `dcm2bids_3.2.0.sif` |
+| `DCM2BIDS_POSTPROC` | `dcm2bids_postproc_container` | `docker-curl-jq.sif` |
+| `MERGE_BIDS_DATASET` | `merge_bids_dataset_container` | `docker-curl-jq.sif` |
+| `BIDSIGNORE` | `bidsignore_container` | `docker-curl-jq.sif` |
+| `BIDS_VALIDATOR` | `bidsvalidator_container` | `bidsvalidator_bash.sif` |
+| `BIDS_QC_GATE` | `bids_qc_gate_container` | `python_3.11.14-trixie.sif` |
+| `MRIQC_PARTICIPANT` | `mriqc_participant_container` | `mriqc_25.0.0rc0.sif` |
+| `MRIQC_GROUP` | `mriqc_group_container` | `mriqc_25.0.0rc0.sif` |
+| `FMRIPREP` | `fmriprep_container` | `fmriprep_24.1.1.sif` |
+| `PYDEFACE` | `pydeface_container` | `pydeface_3.0.sif` |
+| `MRI_DEFACE` | `mri_deface_container` | `mri_deface.sif` |
+| `FSL_DEFACE` | `fsl_deface_container` | `fsl_deface.sif` |
+| `AFNI_REFACER` | `afni_refacer_container` | `afni_refacer_pennlinc.sif` |
+| `DEEPDEFACER` | `deepdefacer_container` | Site-specific SIF path |
+| `DEFACE_QC_RENDER` | `deface_qc_render_container` | `deface_benchmark.sif` |
+| `DEFACE_METRICS` | `deface_metrics_container` | `deface_benchmark.sif` |
+| `DEFACE_DETECTOR` | `deface_detector_container` | `deface_detector.sif` |
+| `MERGE_BENCHMARK` | `merge_benchmark_container` | `deface_benchmark.sif` |
+
+The optional shared `mriqc_container` overrides both MRIQC-specific parameters when set. The defaults shown in the table correspond to the full paths in `nextflow.config` and are also documented in `nextflow_schema.json`.
+
+For resources, references, and scheduler settings, use `site.config`; container selection no longer needs a `process.ext.container` override. For example:
 
 ```groovy
 process {
-    withName: 'DCM2BIDS_CONFIG|DCM2BIDS_POSTPROC|MERGE_BIDS_DATASET|BIDSIGNORE' {
-        ext.container = '/srv/containers/docker-curl-jq.sif'
-    }
-    withName: 'DCM2BIDS|DCM2BIDS_OUTPUT_PATCH' {
-        ext.container = '/srv/containers/dcm2bids_3.2.0.sif'
-    }
-    withName: 'BIDS_VALIDATOR' {
-        ext.container = '/srv/containers/bidsvalidator_bash.sif'
-    }
-    withName: 'BIDS_QC_GATE' {
-        ext.container = '/srv/containers/python_3.11.14-trixie.sif'
-    }
     withName: 'FMRIPREP' {
-        ext.container = '/srv/containers/fmriprep_24.1.1.sif'
         ext.templateflow_host = '/srv/templateflow'
         cpus = 16
         memory = '60 GB'
         maxForks = 1
     }
-    withName: 'PYDEFACE' {
-        ext.container = '/srv/containers/pydeface_3.0.sif'
-        maxForks = 1
-    }
-    withName: 'MRIQC_PARTICIPANT' {
-        cpus = 16
-        memory = '30 GB'
-    }
+    withName: 'PYDEFACE' { maxForks = 1 }
 }
 ```
 
-For a scheduler, additionally configure your site's executor, queue/account and storage mounts in this file. Without an executor override, tasks run locally. Verify absolute input, scratch, image, and reference paths are accessible on compute nodes.
+With `-profile docker`, MRIQC and fMRIPrep default to Docker image tags. MRIQC participant/group and the other enabled production stages completed in a single-subset Solidfox integration run; fMRIPrep was skipped because a FreeSurfer license was unavailable. The remaining processes retain their IRTG SIF defaults; for a Docker run at another site, override each image parameter for every process that the selected mode will execute. Those images must contain the executables, scripts, libraries and resources expected by the corresponding module. Keep site-specific overrides private and do not put credentials in the pipeline repository.
 
-Most declared `*_container` parameters in `nextflow.config` are **not wired into modules**; passing `--fmriprep_container`, for example, does not change `FMRIPREP`'s image. Use the process overrides above. MRIQC is an exception: its participant wrapper calls `apptainer run` using `--mriqc_container`, while its group wrapper hard-codes `/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif`. Your site must make that group image available at that path, or the wrapper must be changed before running MRIQC elsewhere. A process container override does not replace that embedded command argument.
+For a scheduler, additionally configure the executor, queue/account, and storage mounts in `site.config`. Without an executor override, tasks run locally. Verify absolute input, scratch, image, and reference paths are accessible on compute nodes.
+
+All containerized modules now receive their images through Nextflow's process `container` setting. The existing institutional SIF locations remain the defaults, with a legacy site-specific DeepDefacer path; each process has a documented `*_container` parameter. The `docker` profile changes the runtime and provides Docker image defaults for MRIQC and fMRIPrep. For other modules, provide site-built or otherwise compatible Docker images through the corresponding parameters. Docker images must be available locally or from a registry accessible to Docker.
+
+For example, use the institutional deployment with `-profile irtg` and its approved local SIF images; use Docker as an alternative with `-profile docker`. Nextflow stages task inputs and outputs into each task container. fMRIPrep's TemplateFlow cache is mounted read-only using Docker bind syntax under Docker and Apptainer bind syntax otherwise. Set `ext.templateflow_host` in `site.config` if the cache is not at the institutional default. Docker image defaults do not make the restricted clinical network internet-accessible; prepare approved images through the site's normal process.
 
 fMRIPrep requires a valid FreeSurfer license and a populated TemplateFlow cache accessible at `ext.templateflow_host` (bound to `/templateflow`). Obtain the license through FreeSurfer and prepare the references required by the selected output spaces. The default license and TemplateFlow paths are institutional. `ses01`/`ses02` filter aliases also resolve to institutional paths: provide your own JSON filter instead.
 
 ### Container preparation and checks
-
-For the clinical-network constraints, offline provisioning checklist and portable Docker limitations, see [deployment environments](deployment.md). Public-registry pulls below belong on an IT-approved connected preparation system, not inside the restricted clinical execution network.
 
 The prototype’s image-building notes are useful for setup, but its full image set is historical. For dcm2bids, the current default still uses 3.2.0; its [versioned upstream documentation](https://unfmontreal.github.io/Dcm2Bids/3.2.0/how-to/container/) provides this pull pattern:
 
@@ -128,7 +160,7 @@ apptainer pull /data/study/containers/dcm2bids_3.2.0.sif docker://unfmontreal/dc
 apptainer exec /data/study/containers/dcm2bids_3.2.0.sif dcm2bids --help
 ```
 
-Set the corresponding `ext.container` path in `site.config`. This prepares the conversion image only; helper, QC, preprocessing, and defacing images still need separate configuration.
+Set `dcm2bids_container` in the site parameter file. This prepares the conversion image only; helper, QC, preprocessing, and defacing images each have their own parameter.
 
 The current validator executes a Bash task script and calls `bids-validator` directly. Do not assume the prototype’s `validator_1.14.13.sif` is interchangeable with `bidsvalidator_bash.sif`. Check a candidate image before using it:
 
@@ -136,7 +168,7 @@ The current validator executes a Bash task script and calls `bids-validator` dir
 apptainer exec /srv/containers/bidsvalidator_bash.sif bash -c 'command -v bids-validator && bids-validator --version'
 ```
 
-Also inspect a representative validation log: [bids_gate.py](../assets/scripts/bids_gate.py) recognizes textual `[ERROR] CODE` and `[WARNING] CODE` entries. A version check alone does not verify compatibility with that parser. Record image checksums and actual tool versions; the MRIQC wrappers currently write a fixed version string, and SIF filenames are not authoritative version records. These examples were checked against documentation/source, not executed with containers here.
+Also inspect a representative validation log: [bids_gate.py](../assets/scripts/bids_gate.py) recognizes textual `[ERROR] CODE` and `[WARNING] CODE` entries. A version check alone does not verify compatibility with that parser. Record image checksums and actual tool versions; the MRIQC wrappers now query the executable version at runtime, while SIF filenames alone are not authoritative version records. These examples were checked against documentation/source, not executed with containers here.
 
 ## 6. Create a parameter file
 
@@ -159,7 +191,6 @@ skip_fmriprep: false
 mriqc_vpn_file: null
 fmriprep_vpn_file: null
 pydeface_vpn_file: null
-mriqc_container: /srv/containers/mriqc_25.0.0rc0.sif
 fmriprep_fs_license: /data/study/license.txt
 fmriprep_bids_filter: /data/study/bids_filter.json
 ignore_fmriprep_fail: false
@@ -173,14 +204,10 @@ Use `-params-file` or `--parameter value` for pipeline parameters and `-c` for p
 ## 7. Validate configuration and run in stages
 
 ```bash
-nextflow -c site.config config . -profile apptainer -flat > resolved.config.txt
+nextflow -c site.config config . -profile irtg -flat > resolved.config.txt
 ```
 
 Inspect resolved process overrides. This checks configuration resolution, not availability of images, correctness of input data, or success of the pipeline. Follow the [production workflow guide](production_workflow_guide.md) for the actual commands and review checkpoints.
-
-## Standalone application diagnostics
-
-The [integrated container guide](prototype-notes.md#standalone-container-guide-retained-from-the-prototype) includes the precursor’s applicable technical instructions directly in this repository: image preparation, DICOM layout, conversion, validation and field-map repair, individual/project MRIQC, participant-level fMRIPrep, and PyDeface execution. Commands are adapted to the current code and use separate scratch outputs. Use them to diagnose an application; use the staged Nextflow guide for production orchestration.
 
 ## Operational parameter reference
 

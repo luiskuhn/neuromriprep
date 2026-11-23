@@ -35,6 +35,8 @@ _Production workflow from Böhme (2026), Figure 3.1, printed p. 40. The thesis d
 
 MRIQC, fMRIPrep, and defacing branch from the merged BIDS dataset and can run concurrently. Default stop flags enable conversion and validation only; the staged commands below provide review checkpoints.
 
+Container selection is centralized in `conf/modules.config`; each process receives its image from a named `*_container` pipeline parameter. The existing institutional SIF image locations remain the defaults; DeepDefacer retains its legacy site-specific path. Use `-profile irtg` for the restricted clinical Apptainer deployment (`-profile apptainer` remains a compatible generic alias). `-profile docker` supplies Docker images for MRIQC and fMRIPrep; for other modules, provide compatible Docker image references for the process parameters used by the selected workflow. See the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for the complete mapping and examples.
+
 ## Defacing benchmark
 
 The `benchmark_defacing` mode helps select and review a defacing method for your study. It converts DICOM to BIDS, applies **PyDeface, AFNI Refacer, MRI Deface, and FSL Deface** to the same original T1w images, and compares their outputs using visual renderings, image-change metrics, and an automated detector. It does not run MRIQC or fMRIPrep.
@@ -57,37 +59,34 @@ Each selected subject/session must produce an original `anat/*_T1w.nii.gz` image
 
 ### 2. Configure the benchmark environment
 
-Save `benchmark.config`, replacing the paths with compatible images available on every execution node:
+Save `benchmark_params.yaml`, replacing the paths with compatible images available on every execution node:
+
+```yaml
+mode: benchmark_defacing
+input: /data/study/benchmark_samplesheet.csv
+outdir: /data/study/benchmark-results
+dcm2bids_config: /data/study/dcm2bids_config.json
+dcm2bids_config_container: /srv/containers/docker-curl-jq.sif
+dcm2bids_container: /srv/containers/dcm2bids_3.2.0.sif
+dcm2bids_output_patch_container: /srv/containers/dcm2bids_3.2.0.sif
+dcm2bids_postproc_container: /srv/containers/docker-curl-jq.sif
+merge_bids_dataset_container: /srv/containers/docker-curl-jq.sif
+bidsignore_container: /srv/containers/docker-curl-jq.sif
+bidsvalidator_container: /srv/containers/bidsvalidator_bash.sif
+pydeface_container: /srv/containers/pydeface_3.0.sif
+mri_deface_container: /srv/containers/mri_deface.sif
+fsl_deface_container: /srv/containers/fsl_deface.sif
+afni_refacer_container: /srv/containers/afni_refacer_pennlinc.sif
+deface_qc_render_container: /srv/containers/deface_benchmark.sif
+deface_metrics_container: /srv/containers/deface_benchmark.sif
+deface_detector_container: /srv/containers/deface_detector.sif
+merge_benchmark_container: /srv/containers/deface_benchmark.sif
+```
+
+Save `benchmark.config` for resource settings:
 
 ```groovy
 process {
-    withName: 'DCM2BIDS_CONFIG|DCM2BIDS_POSTPROC|MERGE_BIDS_DATASET|BIDSIGNORE' {
-        ext.container = '/srv/containers/docker-curl-jq.sif'
-    }
-    withName: 'DCM2BIDS' {
-        ext.container = '/srv/containers/dcm2bids_3.2.0.sif'
-    }
-    withName: 'BIDS_VALIDATOR' {
-        ext.container = '/srv/containers/bidsvalidator_bash.sif'
-    }
-    withName: 'PYDEFACE' {
-        ext.container = '/srv/containers/pydeface_3.0.sif'
-    }
-    withName: 'MRI_DEFACE' {
-        ext.container = '/srv/containers/mri_deface.sif'
-    }
-    withName: 'FSL_DEFACE' {
-        ext.container = '/srv/containers/fsl_deface.sif'
-    }
-    withName: 'AFNI_REFACER' {
-        ext.container = '/srv/containers/afni_refacer_pennlinc.sif'
-    }
-    withName: 'DEFACE_QC_RENDER|DEFACE_METRICS' {
-        ext.container = '/srv/containers/deface_benchmark.sif'
-    }
-    withName: 'DEFACE_DETECTOR' {
-        ext.container = '/srv/containers/deface_detector.sif'
-    }
     withName: 'PYDEFACE|MRI_DEFACE|FSL_DEFACE|AFNI_REFACER' {
         maxForks = 1
     }
@@ -96,20 +95,11 @@ process {
 
 These are example filenames, not bundled images or verified version identifiers. The helper image needs Bash, jq, and GNU coreutils. MRI Deface needs its brain/face templates; defaults are `/opt/mri_deface/talairach_mixed_with_skull.gca` and `/opt/mri_deface/face.gca` inside its image. Override `mri_deface_brain_template` and `mri_deface_face_template` in the parameter file if necessary, using paths visible inside the container.
 
-The rendering/metrics and detector images must provide the dependencies described in the [benchmark setup guide](docs/benchmark.md#setup-and-execution). `MERGE_BENCHMARK` runs Python 3 with pandas on its execution host because it has no container directive; install those there or set a suitable `container` for that process. Add your site's executor and storage settings for HPC. The example allows one task **per defacer** concurrently, not one task for the entire workflow.
+The rendering/metrics and detector images must provide the dependencies described in the [benchmark setup guide](docs/benchmark.md#setup-and-execution). The `MERGE_BENCHMARK` image must include Python 3 and pandas. Add your site's executor and storage settings for HPC. The example allows one task **per defacer** concurrently, not one task for the entire workflow.
 
 ### 3. Execute and resume
 
-Save `benchmark_params.yaml`:
-
-```yaml
-mode: benchmark_defacing
-input: /data/study/benchmark_samplesheet.csv
-outdir: /data/study/benchmark-results
-dcm2bids_config: /data/study/dcm2bids_config.json
-```
-
-Run from the repository root, using a separate work directory on the tested reflink-capable filesystem:
+Run from the repository root, using a separate work directory with enough capacity for staged and merged BIDS copies. Dataset assembly uses reflinks when supported and falls back to ordinary copies:
 
 ```bash
 nextflow run . -profile apptainer -c benchmark.config \
@@ -129,15 +119,11 @@ Under `/data/study/benchmark-results`, inspect:
 
 Require a result for every intended image and all four methods. Verify where the defaced images were published: the current publisher has a [method-specific layout limitation](docs/output.md#benchmark-outputs), while individual task directories retain their outputs. High detector scores and small image differences do not establish successful anonymization; combine them with visual review before selecting a production defacer. See the [full benchmark guide](docs/benchmark.md) for interpretation and limitations.
 
-## Synthetic diagrams of MRI images
+## Example output
 
-![Synthetic diagrams of MRI images: cartoon sagittal and axial views before and after conceptual facial removal, with orange overlays. Not experimental data; not to scale.](docs/images/pydeface-example.png)
+![Example PyDeface output showing sagittal, coronal, and axial slices of a defaced anatomical MRI.](docs/images/thesis-pydeface-example.png)
 
-**Synthetic diagrams of MRI images.** Panels **A–C** illustrate a sagittal view and **D–F** an axial view. Columns show schematic anatomy before facial removal, after removal, and with the illustrative removal region highlighted in orange. These simplified, AI-generated cartoon diagrams explain the concept of defacing; they are **not experimental data or pipeline output**. Orange is not a computed PyDeface mask or a measured voxelwise difference. The diagrams are not to scale.
-
-This branch applies defacing to anatomical images, not functional images or field maps. Actual outputs require whole-volume review for residual identifying features and unintended tissue removal. These diagrams do not demonstrate anonymization efficacy or mask transfer to other modalities.
-
-[Figure caption, provenance and limitations](docs/images/synthetic-defacing-example.md).
+_PyDeface example from Böhme (2026), Figure 3.2, printed p. 48: sagittal, coronal, and axial slices. [Figure source details](docs/images/README.md)._
 
 ## Step-by-step technical guide
 
@@ -145,7 +131,7 @@ Replace `/data`, `/srv`, and `/scratch` with paths accessible on your execution 
 
 ### 1. Check prerequisites and clone the pipeline
 
-Use Linux, Nextflow >=25.04.0, compatible Java, and Apptainer. The MRIQC/fMRIPrep wrappers require Apptainer-style execution; Docker or Conda alone is insufficient.
+Use Linux, Nextflow >=25.04.0, compatible Java, and the selected container runtime. The IRTG clinical profile uses Apptainer with approved local SIF images: `-profile irtg`. Docker is available as an alternative profile; consult the [container setup guide](docs/usage.md#5-configure-images-resources-and-reference-data) for image requirements and process overrides.
 
 ```bash
 java -version
@@ -158,12 +144,12 @@ git rev-parse HEAD
 
 Record the commit. The bundled `test`/`test_full` profiles are template configurations, not MRI smoke tests.
 
-Defaults request 16 CPUs/30 GB for MRIQC participant processing and 16 CPUs/60 GB per fMRIPrep task. Allow for concurrent branches. Dataset assembly requires GNU `cp --reflink=always`; test your scratch filesystem (there is no copy fallback):
+Defaults request 16 CPUs/30 GB for MRIQC participant processing and 16 CPUs/60 GB per fMRIPrep task. Allow for concurrent branches. Dataset assembly uses GNU `cp --reflink=auto`: it uses copy-on-write where supported and falls back to ordinary copies. Ensure scratch has enough free space for that fallback:
 
 ```bash
 mkdir -p /scratch/neuromriprep-work
 printf 'reflink check\n' > /scratch/neuromriprep-work/reflink-source.txt
-cp --reflink=always /scratch/neuromriprep-work/reflink-source.txt /scratch/neuromriprep-work/reflink-copy.txt
+cp --reflink=auto /scratch/neuromriprep-work/reflink-source.txt /scratch/neuromriprep-work/reflink-copy.txt
 ```
 
 ### 2. Organize the input DICOM data
@@ -224,41 +210,25 @@ Use one entry per line: `bidsignore_list.txt` adds validation exclusions; `bidsi
 
 ### 5. Configure containers and resources
 
-Save as `site.config`, using existing SIF images from your site maintainer and a populated TemplateFlow cache. The helper image needs Bash, jq, and GNU coreutils; the validator needs Bash and `bids-validator`.
+For the default IRTG deployment, use the approved SIF paths configured in the pipeline. If your site stores the SIF files elsewhere, add the relevant `*_container` overrides to `params.yaml`. The helper image needs Bash, jq, and GNU coreutils; the validator needs Bash and `bids-validator`.
+
+The container parameters in `params.yaml` can override the centralized IRTG defaults. With `-profile docker`, the pipeline has upstream `nipreps/mriqc` and `nipreps/fmriprep` image defaults. Nextflow passes these image references to Docker; when an image is not already present locally, Docker pulls it from its registry (Docker Hub for the `nipreps/...` names). The host therefore needs access to the registry unless the images have been staged locally.
+
+The other modules do not automatically use `nipreps` images. Their defaults remain the configured IRTG `.sif` paths, so a Docker run must override the image parameter for every other enabled process with a compatible Docker image. Three Dockerfiles in [`assets/examples/docker-solidfox/`](assets/examples/docker-solidfox/README.md) were used to build the local test images for the conversion/helper tasks, BIDS validator, and PyDeface. A Dockerfile is a build recipe; it is not referenced directly by Nextflow. The build creates a tagged image, and [`container-params.yaml`](assets/examples/docker-solidfox/container-params.yaml) maps those image tags to the pipeline's per-process container parameters. See the linked inventory for the exact module-to-image mapping, versions, build commands, and test status. The `hauser/*` tags are local examples, not public registry references; build them first or replace them with images available to your Docker engine.
+
+Put `ext.templateflow_host` and resource overrides in `site.config`, separately from the container parameters:
 
 ```groovy
 process {
-    withName: 'DCM2BIDS_CONFIG|DCM2BIDS_POSTPROC|MERGE_BIDS_DATASET|BIDSIGNORE' {
-        ext.container = '/srv/containers/docker-curl-jq.sif'
-    }
-    withName: 'DCM2BIDS|DCM2BIDS_OUTPUT_PATCH' {
-        ext.container = '/srv/containers/dcm2bids_3.2.0.sif'
-    }
-    withName: 'BIDS_VALIDATOR' {
-        ext.container = '/srv/containers/bidsvalidator_bash.sif'
-    }
-    withName: 'BIDS_QC_GATE' {
-        ext.container = '/srv/containers/python_3.11.14-trixie.sif'
-    }
     withName: 'FMRIPREP' {
-        ext.container = '/srv/containers/fmriprep_24.1.1.sif'
         ext.templateflow_host = '/srv/templateflow'
         cpus = 16
         memory = '60 GB'
         maxForks = 1
     }
-    withName: 'PYDEFACE' {
-        ext.container = '/srv/containers/pydeface_3.0.sif'
-        maxForks = 1
-    }
-    withName: 'MRIQC_PARTICIPANT' {
-        cpus = 16
-        memory = '30 GB'
-    }
+    withName: 'PYDEFACE' { maxForks = 1 }
 }
 ```
-
-Use `ext.container`; most declared `*_container` parameters are unwired. MRIQC participant uses `mriqc_container` below, but **MRIQC group hard-codes `/nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif`**. Provide that image at that path or adapt the wrapper; changing the participant parameter does not fix group processing.
 
 For HPC, add the scheduler executor, queue/account, and storage bindings; otherwise execution is local. This example limits fMRIPrep to one concurrent task.
 
@@ -281,7 +251,6 @@ skip_fmriprep: false
 mriqc_vpn_file: null
 fmriprep_vpn_file: null
 pydeface_vpn_file: null
-mriqc_container: /srv/containers/mriqc_25.0.0rc0.sif
 fmriprep_fs_license: /data/study/license.txt
 fmriprep_bids_filter: /data/study/bids_filter.json
 ignore_fmriprep_fail: false
@@ -293,7 +262,7 @@ Null lists select all participants and override missing institutional files. `ig
 Resolve and inspect the configuration before running:
 
 ```bash
-nextflow config . -profile apptainer -c site.config -flat > resolved.config.txt
+nextflow -c site.config config . -profile irtg -flat > resolved.config.txt
 ```
 
 This checks configuration resolution, not data or image availability.

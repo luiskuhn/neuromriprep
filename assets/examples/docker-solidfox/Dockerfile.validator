@@ -1,0 +1,10 @@
+FROM docker.io/bids/validator:2.5.6@sha256:02de9497f97f967b84126290889649d78ecc1857a18e73988036ce6b45a2740f
+
+USER root
+RUN apk add --no-cache bash coreutils procps
+RUN deno_path="$(command -v deno)" \
+    && test -n "$deno_path" \
+    && printf '#!/bin/sh\nexec %s run -A /src/bids-validator.js "$@"\n' "$deno_path" \
+       > /usr/local/bin/bids-validator \
+    && chmod 755 /usr/local/bin/bids-validator
+ENTRYPOINT []

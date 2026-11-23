@@ -2,7 +2,6 @@ process DEFACE_DETECTOR {
     tag "${meta.id}"
     label 'process_single'
 
-    container "${task.ext.container ?: '/nic/sw/IRTG/sif/deface_detector.sif'}"
 
     input:
     tuple val(meta), path(nii)

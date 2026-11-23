@@ -2,6 +2,8 @@
 
 Start with [deployment environments](deployment.md) to distinguish the IRTG-2804 clinical SIF installation from the portable Docker subset.
 
+Configuration and container build examples are collected under [`assets/examples/`](../assets/examples/README.md): the IRTG clinical templates and Solidfox Docker inventory.
+
 Read these pages in order for a first study run:
 
 1. [Pipeline architecture](pipeline.md): stages, data dependencies, scientific context, and implementation limits.

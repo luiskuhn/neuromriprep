@@ -19,7 +19,6 @@ process DEFACE_QC_RENDER {
     tag "${meta.subject}_${meta.session}_${method}_${orig_nifti.name}"
     label 'process_single'
 
-    container { task.ext.container ?: (params.deface_qc_container ?: '/nic/sw/IRTG/sif/deface_benchmark.sif') } 
 
     input:
     tuple val(meta), val(method), path(defaceqcrender), path(orig_nifti), path(defaced_nifti)

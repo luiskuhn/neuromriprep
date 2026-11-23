@@ -1,0 +1,47 @@
+# Example only: replace study paths with approved locations accessible to all
+# execution nodes. Keep this file private if it contains study-specific paths.
+mode: production
+input: /approved/study/config/samplesheet.csv
+outdir: /approved/study/results/neuromriprep-run-001
+dcm2bids_config: /approved/study/config/dcm2bids.json
+bids_qc_allowlist: /approved/pipeline/neuromriprep/assets/input_pipeline/bidsval_allowlist.txt
+enforce_bidsqc_gate: true
+
+# Begin with conversion/validation, then use the staged commands in
+# docs/production_workflow_guide.md. The defaults below keep MRIQC and fMRIPrep
+# eligible after the stop gates are opened.
+stop_bidsval: true
+stop_mriqc: true
+stop_fmriprep: true
+skip_mriqc: false
+skip_fmriprep: false
+run_complete: false
+
+# Subject allowlists: create this file with one BIDS subject label per line.
+# Include every approved subject to process the whole samplesheet, or only the
+# approved subset. These filters apply to subjects, not individual sessions.
+mriqc_vpn_file: /approved/study/config/participants.txt
+fmriprep_vpn_file: /approved/study/config/participants.txt
+
+# fMRIPrep inputs. The filter must exist; use {} for an unrestricted BIDS filter.
+fmriprep_fs_license: /nic/sw/FreeSurfer/license.txt
+fmriprep_bids_filter: /approved/study/config/bids_filter.json
+ignore_fmriprep_fail: false
+
+deface_tool: pydeface
+force_dcm2bids: false
+
+# Explicit IRTG SIFs for the production path above. These match nextflow.config;
+# omit entries for processes not used by your selected run if desired.
+dcm2bids_config_container: /nic/sw/IRTG/sif/docker-curl-jq.sif
+dcm2bids_container: /nic/sw/IRTG/sif/dcm2bids_3.2.0.sif
+dcm2bids_output_patch_container: /nic/sw/IRTG/sif/dcm2bids_3.2.0.sif
+dcm2bids_postproc_container: /nic/sw/IRTG/sif/docker-curl-jq.sif
+merge_bids_dataset_container: /nic/sw/IRTG/sif/docker-curl-jq.sif
+bidsignore_container: /nic/sw/IRTG/sif/docker-curl-jq.sif
+bidsvalidator_container: /nic/sw/IRTG/sif/bidsvalidator_bash.sif
+bids_qc_gate_container: /nic/sw/IRTG/sif/python_3.11.14-trixie.sif
+mriqc_participant_container: /nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif
+mriqc_group_container: /nic/sw/IRTG/sif/mriqc_25.0.0rc0.sif
+fmriprep_container: /nic/sw/IRTG/sif/fmriprep_24.1.1.sif
+pydeface_container: /nic/sw/IRTG/sif/pydeface_3.0.sif

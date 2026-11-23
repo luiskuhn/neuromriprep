@@ -19,7 +19,7 @@ The connection to NFDI is alignment with its research data management goals, rat
 | Input metadata   | `main.nf`, `workflows/neuromriprep.nf`                                    | Read `project,dicom_dir`; derive subject and session from directory basename.                                                                                                |
 | Conversion       | `subworkflows/local/bidsing/main.nf`                                      | Modify field-map identifiers for each session, run dcm2bids, optionally apply the selected-participant metadata patch.                                                       |
 | Postprocessing   | `modules/local/dcm2bidspostprocess/main.nf`                               | Remove the exact `Acquisitionduration` key from BOLD JSON; move files containing `adc` to ADC derivatives; remove DWI sbref bval/bvec files. These are study-specific rules. |
-| Dataset assembly | `modules/local/mergebidsdataset/main.nf`                                  | Merge subjects/sessions, create `dataset_description.json` with BIDSVersion 1.9.0, collect conversion logs. Requires reflink-capable storage.                                |
+| Dataset assembly | `modules/local/mergebidsdataset/main.nf`                                  | Merge subjects/sessions, create `dataset_description.json` with BIDSVersion 1.9.0, collect conversion logs. Uses reflinks when available and falls back to ordinary copies. |
 | Validation       | `modules/local/bidsignore/main.nf`, `modules/local/bidsvalidator/main.nf` | Apply `.bidsignore` additions/removals and capture verbose validator output.                                                                                                 |
 | QC gate          | `assets/scripts/bids_gate.py`                                             | Block downstream data when parsed errors or non-allowlisted warnings are present, unless enforcement is disabled.                                                            |
 | MRIQC            | `subworkflows/local/mriqc_participants/main.nf`                           | One participant-level invocation over the dataset (optionally selected subjects), followed by group aggregation.                                                             |
@@ -38,7 +38,7 @@ A QC gate rejection filters the downstream channel rather than failing the Nextf
 
 ## Current development limitations
 
-- Container defaults and several inputs refer to local `/nic/sw/IRTG` resources. Required study assets are excluded from Git. MRIQC group has a hard-coded image path with no parameter override.
+- Container defaults point to local IRTG images and are now mapped centrally in `conf/modules.config`; replace them through the per-process `*_container` parameters at other sites. Some study assets and reference paths remain site-specific and are excluded from Git.
 - Both modes merge all samplesheet rows into one dataset; use one study per invocation and avoid duplicate subject/session rows.
 - fMRIPrep metadata are not deduplicated by subject. Multiple sessions for the same subject can schedule duplicate participant jobs writing identical published paths. Review or fix task deduplication before a multi-session production run.
 - Each modified dcm2bids configuration is published as `modified_config.json`; multiple rows can overwrite that root filename. Retain the work directory for per-task provenance.
@@ -57,4 +57,4 @@ Relevant printed-page references are §§2.2–2.7 (pp. 19–35: conversion, QC,
 
 The thesis reports approximately 78 hours of summed task runtime and 19 hours elapsed for its evaluated production run; these are study-specific observations, not resource guarantees. Its visual evaluation found successful defacing for 60 of 62 images with each of PyDeface and AFNI Refacer. Automated detector results disagreed with manual ratings, supporting combined visual and quantitative review rather than treating detector output as ground truth.
 
-Operational instructions follow the current code where wording differs from the thesis: reflink copies are mandatory, some reports remain task-local, and the defacing branch is controlled independently of `stop_mriqc`. No universal anonymization guarantee or benchmark ranking for other datasets follows from the thesis evaluation.
+Operational instructions follow the current code where wording differs from the thesis: dataset assembly may use reflinks or ordinary copies, some reports remain task-local, and the defacing branch is controlled independently of `stop_mriqc`. No universal anonymization guarantee or benchmark ranking for other datasets follows from the thesis evaluation.

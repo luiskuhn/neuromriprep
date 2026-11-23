@@ -6,21 +6,21 @@ This guide complements [technical usage](usage.md) and the [production checkpoin
 
 neuromriprep was developed for [IRTG-2804](https://irtg2804.de/), an international research training group studying women's mental health across reproductive transitions. In its University Hospital clinical deployment, processing must remain within the approved clinical network. Internet and data access are restricted; container images are supplied as IT-approved local `.sif` files. Do not replace these images with public registry downloads on clinical systems or move patient data outside that environment to solve an installation problem.
 
-Apptainer/Singularity is the approved runtime in this setting. Its adoption reflects institutional security and operational policy; it is not a blanket claim that one runtime makes patient data secure. Follow local IT requirements for runtime version, image provenance, privileges, bind mounts, storage and network access. The current wrappers invoke `apptainer` explicitly in some stages, so a machine exposing only a `singularity` executable needs an IT-approved compatibility arrangement.
+Apptainer/Singularity is the approved runtime in this setting. Use the explicit `-profile irtg`; the generic `-profile apptainer` remains as a backward-compatible alias. The IRTG profile enables Apptainer with automatic mounts and disables the competing container runtimes. Its adoption reflects institutional security and operational policy; it is not a blanket claim that one runtime makes patient data secure. Follow local IT requirements for runtime version, image provenance, privileges, bind mounts, storage and network access. Container execution is delegated to Nextflow's process `container` directive; fMRIPrep additionally configures a read-only TemplateFlow bind using the selected runtime's syntax.
 
 An international collaborating site may permit Docker. That is a separate deployment decision, not permission to export clinical data. Establish the receiving site's authorization, data-transfer agreement and approved storage before transferring inputs. Defacing alone does not authorize public redistribution or remove identifying metadata.
 
 ## What can actually be configured?
 
-| Stage | Current image mechanism | Portability boundary |
+| Stage | Central image parameter | Current deployment note |
 | --- | --- | --- |
-| Conversion, helper steps, BIDS validator and QC gate | Process-specific `task.ext.container` | Set a local SIF path or a suitable Docker image through `withName`; each image must contain the tools called by that module. |
-| PyDeface | `task.ext.container` | Same override mechanism; image must expose PyDeface, FSL and its runtime environment to a non-interactive task shell. |
-| fMRIPrep | `task.ext.container`, `ext.templateflow_host` | Image configurable, but module `containerOptions` uses Apptainer `--cleanenv -B` syntax. Image substitution alone is insufficient for Docker. License and reference cache remain required. |
-| MRIQC participant | `params.mriqc_container` inside `apptainer run` | Selecting the Docker profile does not replace this nested Apptainer command. |
-| MRIQC group | Embedded `apptainer run` and institutional SIF path | Not fully site-configurable in the current wrapper. The approved path must exist, or a future separately reviewed change is needed. |
+| Conversion and dataset assembly | `dcm2bids_config_container`, `dcm2bids_container`, `dcm2bids_output_patch_container`, `dcm2bids_postproc_container`, `merge_bids_dataset_container` | Defaults point to the IRTG SIF set; external sites must supply compatible images for the enabled processes. |
+| Validation and QC gate | `bidsignore_container`, `bidsvalidator_container`, `bids_qc_gate_container` | The validator image must provide Bash and `bids-validator`; the QC gate image must provide the Python runtime expected by its script. |
+| MRIQC | `mriqc_participant_container`, `mriqc_group_container` | Both stages use Nextflow-managed containers. The Docker profile provides the MRIQC image defaults; both stages completed in a full single-subset Solidfox integration run. |
+| fMRIPrep | `fmriprep_container` | Docker and Apptainer are supported at the process launch level. fMRIPrep still requires a FreeSurfer license and a readable TemplateFlow cache; a Docker fMRIPrep smoke test has not been run. |
+| Defacing and benchmark QC | `pydeface_container`, `mri_deface_container`, `fsl_deface_container`, `afni_refacer_container`, `deepdefacer_container`, `deface_qc_render_container`, `deface_metrics_container`, `deface_detector_container`, `merge_benchmark_container` | Defaults preserve the established SIF setup; DeepDefacer retains a legacy site-specific image path. An alternate site must supply images containing each module's executable and dependencies. |
 
-Many top-level `*_container` parameters are declared but not consumed by the corresponding modules. Use the source-backed overrides in [usage](usage.md#5-configure-images-resources-and-reference-data); do not assume a plausible parameter name changes an image. Benchmark modules require their own audit and are outside the Docker route below.
+Container selection is centralized in `conf/modules.config`, while parameter defaults are declared in `nextflow.config` and documented in `nextflow_schema.json`. Use the named parameters in a `-params-file` to substitute site images. The Docker profile includes defaults only for MRIQC and fMRIPrep; other Docker images remain a site responsibility. See [container parameters and examples](usage.md#5-configure-images-resources-and-reference-data).
 
 ## Preparing a restricted-network installation
 
@@ -38,31 +38,86 @@ On the clinical execution system, use local paths rather than `docker://`, `oras
 
 The `apptainer pull` examples elsewhere in these docs are **connected preparation examples only**, subject to IT approval; they are not instructions to pull images inside the restricted clinical network.
 
-## Portable Docker route: conversion, validation and PyDeface
+## Step-by-step IRTG clinical run
 
-This route was exercised on a native Linux x86-64 host. MRIQC and fMRIPrep were disabled. Docker Desktop on Apple silicon was also exercised with amd64 emulation, but its performance is not representative of native Linux.
+These are operator steps for the clinical compute environment. They must be adapted to local scheduler, storage and security policy. Test the site-specific steps with the radiology/clinical IT team; this guide has not been executed in that environment.
+
+1. **Prepare the approved software environment.** Obtain the approved pipeline checkout/revision, Nextflow and Java installation, Apptainer module, and all required SIF files through the hospital's normal software provisioning process. Keep the source, work, configuration, reports and results on approved storage. Do not pull containers or expose patient inputs to a public registry.
+2. **Check the execution host.** From the repository root, record the revision and check `nextflow -version`, `java -version`, and `apptainer --version`. Confirm that the scheduler allocation, scratch quota, memory and CPU limits match the `site.config`. Verify that required images are readable on compute nodes and record `sha256sum` values and IT provenance.
+3. **Prepare local run configuration.** Start from [`assets/examples/irtg-clinical/site.config`](../assets/examples/irtg-clinical/site.config) and [`assets/examples/irtg-clinical/params.yaml`](../assets/examples/irtg-clinical/params.yaml). Replace the example input, output, DCM2BIDS, allowlist and BIDS-filter paths with approved site paths; confirm that all execution nodes can read them. The parameter example lists the default IRTG SIF paths explicitly. Use typed YAML booleans. Keep site paths and study metadata out of public source control.
+4. **Resolve and inspect configuration before submitting.** Run `nextflow -c site.config config . -profile irtg -flat` and review the resolved file for the expected Apptainer runtime, local SIF paths, and resource overrides. Then inspect `params.yaml` directly to confirm input/output locations, enabled stages and typed Boolean settings. The config subcommand does not load a `-params-file`; the run's startup messages and execution trace provide the final check. These checks do not prove that images, references or input data are valid.
+5. **Run conversion and validation first.** Set `skip_mriqc: true`, `skip_fmriprep: true` and `enforce_bidsqc_gate: true` in the parameter file, then launch:
+
+   ```bash
+   nextflow run . -profile irtg -c site.config -params-file params.yaml \
+     -work-dir /approved/scratch/neuromriprep-work \
+     --stop_bidsval true --stop_mriqc true --stop_fmriprep true \
+     -with-report /approved/reports/nextflow-report.html \
+     -with-trace /approved/reports/nextflow-trace.txt \
+     -with-timeline /approved/reports/nextflow-timeline.html
+   ```
+
+   Submit through the site-approved scheduler or persistent launcher and retain the session log. Review the BIDS conversion, parsed participant/session labels, metadata, `dataset_validation_log.txt` and `bids_qc_summary.txt`. Continue only after the gate reports `check_passed: True` or an authorized, documented exception.
+6. **Run only the authorized downstream stages.** For a defacing run without MRIQC or fMRIPrep, retain `skip_mriqc: true` and `skip_fmriprep: true`, review the gate, then resume the same session and work directory:
+
+   ```bash
+   nextflow run . -profile irtg -c site.config -params-file params.yaml \
+     -work-dir /approved/scratch/neuromriprep-work -resume \
+     --stop_bidsval false --stop_mriqc false --stop_fmriprep false \
+     --deface_tool pydeface
+   ```
+
+   This allows the enabled defacing branch while keeping fMRIPrep ineligible. If MRIQC is approved and configured, set `skip_mriqc: false` and use the MRIQC review checkpoint in [the production workflow guide](production_workflow_guide.md). fMRIPrep requires a valid FreeSurfer license and complete TemplateFlow resources; do not enable it until the site has provisioned these and the study has authorized its use.
+7. **Review outputs and preserve provenance.** Check the exit status, Nextflow session log, trace, reports, BIDS gate, expected derivative counts, and visual defacing QC. Preserve the exact revision, parameter and site configurations, container checksums, scheduler/resource settings, and work/cache directories until the run is reviewed. Defaced anatomical outputs do not make original data, sidecars, logs or other modalities anonymous.
+
+## Portable Docker route: site-specific image configuration
+
+**Solidfox** is the remote native Linux x86-64 host used for the Docker integration test. It has 32 CPUs and approximately 252 GiB RAM, and runs Docker 29.0.2. The run used Java 25.0.3, Nextflow 26.04.6 and Nextflow's local executor. The host's work volume uses ext4.
+
+Here, “portable” means that a site can select compatible images through pipeline parameters. The Docker profile is **not plug-and-play outside Solidfox**: it supplies default Docker references only for MRIQC and fMRIPrep, while the other process parameters still default to IRTG `.sif` paths. Before running Docker at another site, override every image parameter used by the selected workflow with a Docker image containing the expected executables, scripts, libraries and templates. Verify image architecture, availability, UID/GID and bind-mount behavior on that host. fMRIPrep additionally needs a valid FreeSurfer license and a populated TemplateFlow cache; it was not part of the completed Solidfox run. The successful one-subset test demonstrates this configuration on one Linux host, not universal cross-site compatibility.
+
+The [Solidfox Docker inventory](../assets/examples/docker-solidfox/README.md) lists the exact tested image tags, application versions, image IDs, module assignments and Dockerfile build recipes. It marks the configured-but-uninvoked process and the untested optional modules separately.
+
+The production workflow completed a Docker integration run on Solidfox (native Linux x86-64, 32 CPUs, approximately 252 GiB RAM, ext4 work volume, Docker 29.0.2, Java 25.0.3 and Nextflow 26.04.6). Nextflow used the local executor. The run used one restricted internal participant/session test subset; no input images or participant identifiers are included in this repository. Conversion, dataset assembly, validation, the enforced BIDS QC gate, MRIQC participant/group processing and eight PyDeface anatomical-image tasks completed. The gate passed with zero errors; five warnings were all handled by the configured allowlist. MRIQC participant processing took about 35 minutes, group processing about 3 seconds, and individual PyDeface tasks took about 4.5–8 minutes while running concurrently. The resumed pipeline run took about 35 minutes; the first attempt and recovery extended total elapsed time to roughly 43 minutes. fMRIPrep was deliberately skipped because no FreeSurfer license was available. This is a single-subset integration check, not a full-cohort validation or a controlled performance benchmark.
+
+Clinical parameter and site-config templates are in [`assets/examples/irtg-clinical/`](../assets/examples/irtg-clinical/). They explicitly show the default `/nic/sw/IRTG/sif/` image locations. Replace all `/approved/...` study paths, prepare a subject allowlist containing one BIDS subject label per line, and create the referenced `bids_filter.json` (use `{}` for no BIDS filtering). The sample begins with stop flags enabled for the conversion/validation review checkpoint. It leaves MRIQC and fMRIPrep eligible for subsequent stages; if fMRIPrep is not authorized or its license/reference data are not available, set `skip_fmriprep: true` in the private parameter file before opening downstream stop gates.
+
+The first attempt exposed that Solidfox's ext4 work volume does not support mandatory reflink cloning. Dataset assembly now uses `cp --reflink=auto`, retaining copy-on-write where available and falling back to ordinary copies; the resumed run completed on ext4. Docker Desktop on Apple silicon was also exercised with amd64 emulation, but its performance is not representative of native Linux.
 
 ### Preconditions before claiming an unchanged-source deployment
 
-The study checkout used for that experience included portability fixes: the merge module's `cp --reflink=always` was changed to `--reflink=auto`, and a stray standalone token in its configuration snapshot was removed. These are **not runtime profile settings**, and are not applied by this documentation. The unmodified branch still needs its documented reflink-capable work filesystem and a successful configuration parse. If either fails, stop and record the incompatibility rather than claiming the Docker profile fixes it. Keep any future source patch separately reviewed from clinical deployment changes.
+Dataset assembly uses `cp --reflink=auto`: it uses copy-on-write where supported and falls back to ordinary copies on filesystems such as Solidfox ext4. The fallback needs more scratch space and may take longer. The completed Solidfox test exercised the standardized PR source; it does not establish compatibility with every filesystem or deployment. Record the exact workflow revision used.
 
 The site configuration also used `stageInMode = 'copy'` for `DCM2BIDS_POSTPROC`, whose script moves/edits staged files. This is a configuration override and avoids altering upstream files through staged links. Recheck available disk space when using copies.
 
 ### Image preparation
 
-Provide locally built or approved images with explicit versions/digests. Example names below are placeholders, not published images:
+Provide locally built or approved images with explicit versions/digests. Image names below are placeholders, not published images. Put image overrides in `docker-images.json`; do not encode images in `process.ext.container` blocks:
+
+```json
+{
+  "dcm2bids_config_container": "site/neuromriprep-helper:PINNED",
+  "dcm2bids_container": "site/neuromriprep-conversion:PINNED",
+  "dcm2bids_output_patch_container": "site/neuromriprep-conversion:PINNED",
+  "dcm2bids_postproc_container": "site/neuromriprep-helper:PINNED",
+  "merge_bids_dataset_container": "site/neuromriprep-helper:PINNED",
+  "bidsignore_container": "site/neuromriprep-helper:PINNED",
+  "bidsvalidator_container": "site/neuromriprep-validator:PINNED",
+  "bids_qc_gate_container": "site/neuromriprep-python:PINNED",
+  "pydeface_container": "site/neuromriprep-pydeface:PINNED"
+}
+```
+
+For this subset, use a separate `docker-site.config` for resource and staging settings:
 
 ```groovy
-// docker-site.config: replace all image names with prepared local images.
 docker.enabled = true
 apptainer.enabled = false
 executor.queueSize = 8
 executor.cpus = 32
 executor.memory = '200 GB'
 process {
-    executor = 'local'
     withName: 'DCM2BIDS|DCM2BIDS_CONFIG|DCM2BIDS_POSTPROC|MERGE_BIDS_DATASET|BIDSIGNORE|BIDS_QC_GATE' {
-        ext.container = 'site/neuromriprep-conversion:PINNED'
         cpus = 1
         memory = '2 GB'
     }
@@ -72,12 +127,10 @@ process {
     }
     withName: 'DCM2BIDS_POSTPROC' { stageInMode = 'copy' }
     withName: 'BIDS_VALIDATOR' {
-        ext.container = 'site/neuromriprep-validator:PINNED'
         cpus = 2
         memory = '6 GB'
     }
     withName: 'PYDEFACE' {
-        ext.container = 'site/neuromriprep-pydeface:PINNED'
         cpus = 4
         memory = '16 GB'
         maxForks = 8
@@ -116,7 +169,7 @@ Use unquoted JSON booleans (or YAML booleans) in a parameter file. Add study-spe
 ```bash
 nextflow -c docker-site.config config . -profile docker -flat > resolved.config.txt
 nextflow -log run.log run main.nf -profile docker \
-  -c docker-site.config -params-file params.json \
+  -c docker-site.config -params-file docker-images.json \
   -work-dir /data/study/work/run01 \
   -with-report /data/study/reports/run01/report.html \
   -with-trace /data/study/reports/run01/trace.txt \
